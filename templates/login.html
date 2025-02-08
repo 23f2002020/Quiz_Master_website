@@ -13,19 +13,19 @@
 
 <body class="try">
    <div class="wrapper">
-    <form action="">
+    <form action="/login" method="POST">
         <h1>LOGIN</h1>
       
     <div class="mail">
         
         <!-- <label for="user_name" class="form-label">Email address</label><br> -->
         
-        <input type="email"  id="user_name" placeholder="Username" required>
+        <input type="email" name="user_name" id="user_name" placeholder="Username" required>
         <i class='bx bx-user' ></i>
     </div>
     <div class="mail">
         <!-- <label for="Password">Password</label><br> -->
-        <input type="password" class="form-control" id="floatingPassword" placeholder="Password" required>
+        <input type="password" class="form-control" name= "password" id="floatingPassword" placeholder="Password" required>
         <i class='bx bx-lock-alt' ></i>
         </div>
     <div class="rm-me">
@@ -33,12 +33,16 @@
         <a href="#">Forgot Password?</a>
     </div>
     <div >
-        <button type="button" class="btn">LOGIN</button>
+        <button type="submit" class="btn">LOGIN</button>
         <!-- <button type="button" class="btn btn-outline-primary">SIGN UP</button> -->
         
     </div>
     <div class="newuser">
-        Don't have an account? <a href="#"><button type="button" class="btn-outline-primary">SIGN UP</button></a>
+        Don't have an account? <a href="/signup"><button type="button" class="btn-outline-primary">SIGN UP</button></a>
+    </div>
+    <div class="err_msg">
+        <p>{{err_msg}}</p>  
+
     </div>
     </form>  
     </div>

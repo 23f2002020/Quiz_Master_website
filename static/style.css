@@ -15,6 +15,19 @@
     margin: auto;
 }
 
+.index{
+    border: 1px solid red;
+    margin: auto;
+    width: 650px;
+    height: auto;
+    padding: 10px;
+    border-radius: 11px;
+    margin-top: 22px;
+    text-align: justify;
+    font-size: 16px;
+    
+}
+
 .box{
     border: 1px solid greenyellow;
     margin-top: 10px;
@@ -162,7 +175,7 @@ body.try{
 }
 
 .newuser a .btn-outline-primary{
-    color: ;
+    /* color: ; */
     text-decoration: none;
     font-weight: 600;
 
@@ -170,4 +183,61 @@ body.try{
 
 .newuser a .btn-outline-primary:hover{
     color: rgb(32, 13, 237);
+}
+.home-container {
+    display: flex;
+    width: 100%;
+    margin-top: 20px;
+    max-width: 1200px;
+    gap: 60px;
+    padding: 20px;
+    align-items: center;
+}
+
+
+
+.description {
+    backdrop-filter: blur(50px);
+    -webkit-backdrop-filter: blur(25px);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    font-size: 1.1em;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.login-link {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.login-link .btn {
+    display: inline-block;
+    padding: 10px 30px;
+    background: rgb(4, 189, 251);
+    color: #333;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.login-link .btn:hover {
+    background: rgb(3, 169, 224);
+    transform: translateY(-2px);
+}
+
+body.try {
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.err_msg{
+    text-align: center;
+    color: maroon !important;
+    margin: auto;
 }

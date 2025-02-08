@@ -13,40 +13,40 @@
 
 <body class="try">
    <div class="wrapper signup">
-    <form action="">
+    <form action="/signup" method="POST">
         <h1>SIGNUP</h1>
         
 
         <div class="mb-3">
         
-            <label for="Full_name" class="form-label">Full Name</label><br>
+            <label for="full_name" class="form-label">Full Name</label><br>
             
-            <input type="text"  id="user_name" placeholder="Username" required>
+            <input type="text"  name='full_name'id="user_name" placeholder="Username" required>
         </div>
       
     <div class="mb-3">
         
         <label for="user_name" class="form-label">Email address</label><br>
         
-        <input type="email"  id="user_name" placeholder="xyz@gmail.com" required>
+        <input type="email" name="user_name" id="user_name" placeholder="xyz@gmail.com" required>
         <!-- <i class='bx bx-user' ></i> -->
     </div>
     <div class="mb-3">
         <label for="Password">Password</label><br>
-        <input type="password"  id="floatingPassword" placeholder="Password" required>
+        <input type="password"  name="password" id="floatingPassword" placeholder="Password" required>
         <!-- <i class='bx bx-lock-alt' ></i> -->
         </div>
 
         <div class="mb-3">
             <label for="Password">Qualification</label><br>
-            <input type="text"  id="floatingPassword" placeholder="qualification" required>
+            <input type="text" name="qualification" id="floatingPassword" placeholder="qualification" required>
             <!-- <i class='bx bx-lock-alt' ></i> -->
             </div>
             <div class="mb-3">
         
-                <label for="Full_name" class="form-label">DOB</label><br>
+                <label for="dob" class="form-label">DOB</label><br>
                 
-                <input type="date"  id="user_name"  required>
+                <input type="text" name="dob" id="user_name"  required>
             </div>
 
 
@@ -55,12 +55,16 @@
         <a href="#">Forgot Password?</a>
     </div> -->
     <div >
-        <button type="button" class="btn">SIGNUP</button>
+        <button type="submit" class="btn">SIGNUP</button>
         <!-- <button type="button" class="btn btn-outline-primary">SIGN UP</button> -->
         
     </div>
     <div class="newuser">
-        Existing User? <a href="#"><button type="button" class="btn-outline-primary">LOGIN</button></a>
+        Existing User? <a href="/login"><button type="button" class="btn-outline-primary">LOGIN</button></a>
+    </div>
+    <div class="err_msg">
+        <p>{{err_msg}}</p>  
+
     </div>
     </form>  
     </div>
