@@ -1,0 +1,119 @@
+{% extends "admin_layout.html" %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Add Question</h3>
+                    <p class="text-center">Quiz: {{ quiz.title }}</p>
+                    <p class="text-center">Remaining questions: {{ remaining_questions }}/{{ quiz.totalNoQues }}</p>
+                    
+                    <!-- Question Type Selection Tabs -->
+                    <ul class="nav nav-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link {% if not question_type or question_type == 'mcq' %}active{% endif %}" 
+                               href="{{ url_for('add_questions', quiz_id=quiz.id, type='mcq') }}">Multiple Choice</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if question_type == 'numeric' %}active{% endif %}" 
+                               href="{{ url_for('add_questions', quiz_id=quiz.id, type='numeric') }}">Numeric Answer</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('save_question', quiz_id=quiz.id) }}">
+                        <input type="hidden" name="question_type" value="{{ question_type }}">
+                        
+                        <!-- Question Text -->
+                        <div >
+                            <label for="question" class="form-label">Question Text:</label>
+                            <textarea class="form-control" id="question" name="question" 
+                                    rows="3" required></textarea>
+                        </div>
+
+                        <!-- Marks -->
+                        <div >
+                            <label for="marks" class="form-label">Marks:</label>
+                            <input type="number" class="form-control" id="marks" name="marks" 
+                                   min="1" max="{{ quiz.totalMarks }}" required>
+                        </div>
+
+                        {% if question_type == 'mcq' %}
+                            <!-- MCQ Options -->
+                            <div >
+                                <label class="form-label">Options:</label>
+                                <div >
+                                    <input type="text" class="form-control" name="option1" 
+                                           placeholder="Option A" required>
+                                </div>
+                                <div >
+                                    <input type="text" class="form-control" name="option2" 
+                                           placeholder="Option B" required>
+                                </div>
+                                <div >
+                                    <input type="text" class="form-control" name="option3" 
+                                           placeholder="Option C" required>
+                                </div>
+                                <div >
+                                    <input type="text" class="form-control" name="option4" 
+                                           placeholder="Option D" required>
+                                </div>
+                        
+                                <div >
+                                    <label for="correct_mcq_answer" class="form-label">Correct Answer:</label>
+                                    <select class="form-control" id="correct_mcq_answer" 
+                                            name="correct" required>
+                                        <option value="">Select correct option</option>
+                                        <option value="A">Option A</option>
+                                        <option value="B">Option B</option>
+                                        <option value="C">Option C</option>
+                                        <option value="D">Option D</option>
+                                    </select>
+                                </div>
+    
+                            {% else %}
+                                <!-- Numeric Answer -->
+                                <div >
+                                    <label for="numeric_answer" class="form-label">Correct Answer:</label>
+                                    <input type="number" step="any" class="form-control" 
+                                           id="numeric_answer" name="numeric_answer" required>
+                                </div>
+    
+                                <!-- Tolerance -->
+                                <div >
+                                    <label for="tolerance" class="form-label">
+                                        Tolerance (±):
+                                        <small class="text-muted">
+                                            (Acceptable range will be answer ± tolerance)
+                                        </small>
+                                    </label>
+                                    <input type="number" step="any" class="form-control" 
+                                           id="tolerance" name="tolerance" required>
+                                </div>
+                            {% endif %}
+
+                            <div >
+                                <label for="explanation" class="form-label">Explanation::</label>
+                                <textarea class="form-control" id="explanation" name="explanation" 
+                                        rows="3" required></textarea>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button type="submit" name="add_another" class="btn btn-primary me-2">
+                                    Save & Add Another
+                                </button>
+                                <button type="submit" class="btn btn-success ">
+                                    Save & Finish
+                                </button>
+                                <a href="{{ url_for('admin_dashboard',Name=Name )}}" class="btn btn-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

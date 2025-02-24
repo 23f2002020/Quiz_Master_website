@@ -1,0 +1,50 @@
+{% extends "user_layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>{{ quiz.title }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="quiz-info mb-4">
+                <h4>Quiz Information</h4>
+                <ul class="list-group">
+                    <li class="list-group-item">
+                        <strong>Duration:</strong> {{ quiz.duration }} minutes
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Total Questions:</strong> {{ quiz.questions|length }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Total Marks:</strong> {{ quiz.totalMarks }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Passing Marks:</strong> {{ quiz.passingMarks }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Deadline:</strong> {{ quiz.deadline.strftime('%Y-%m-%d %H:%M') }}
+                    </li>
+                </ul>
+            </div>
+
+            <div class="quiz-rules mb-4">
+                <h4>Instructions</h4>
+                <ul>
+                    <li>This is a timed quiz. Once started, the timer cannot be paused.</li>
+                    <li>Each question must be answered in sequence.</li>
+                    <li>You cannot return to previous questions once answered.</li>
+                    <li>Ensure you have a stable internet connection before starting.</li>
+                    <li>Do not refresh the page or close the browser during the quiz.</li>
+                </ul>
+            </div>
+
+            <div class="text-center">
+                <form action="{{ url_for('attempt_quiz', quiz_id=quiz.id) }}" method="POST">
+                    <button type="submit" class="btn btn-primary btn-lg">Start Quiz</button>
+                </form>
+                <a href="{{ url_for('user_interface') }}" class="btn btn-secondary mt-2">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

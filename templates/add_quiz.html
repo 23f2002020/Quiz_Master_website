@@ -1,0 +1,60 @@
+{% extends "admin_layout.html" %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Create New Quiz</h3>
+                    <p class="text-center">Chapter: {{ chapter.chapter }}</p>
+                </div>
+                <div class="card-body">
+                    <form action = "{{ url_for('add_quiz', chapter_id=chapter.id) }}", method="POST">
+                        <div class="form-group">
+                            <label for="quiz_name">Quiz Title:</label>
+                            <input type="text" class="form-control" id="quiz_name" name="quiz_name" required>
+                        </div>
+                        
+                        <div class="form-group ">
+                            <label for="description">Description:</label>
+                            <textarea class="form-control" id="description" name="description" rows="2" required></textarea>
+                        </div>
+                        
+                        <div class="form-group ">
+                            <label for="duration">Duration (minutes):</label>
+                            <input type="number" class="form-control" id="duration" name="duration" min="1" required>
+                        </div>
+                        
+                        <div class="form-group ">
+                            <label for="quiz_deadline">Deadline:</label>
+                            <input type="datetime-local" class="form-control" id="quiz_deadline" name="quiz_deadline"  required>
+                        </div>
+
+                        <div class="form-group ">
+                            <label for="totalMarks">Total Marks:</label>
+                            <input type="number" class="form-control" id="totalMarks" name="totalMarks"  required>
+                        </div>
+                        
+                        
+                        <div class="form-group ">
+                            <label for="passing_marks">Passing Marks:</label>
+                            <input type="number" class="form-control" id="passing_marks" name="passing_marks"  required>
+                        </div>
+
+                        <div class="form-group ">
+                            <label for="totalNoQues">Total Number Of Questions:</label>
+                            <input type="number" class="form-control" id="totalNoQues" name="totalNoQues"  required>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary">Create Quiz & Add Questions</button>
+
+                            <a href="{{ url_for('admin_dashboard', Name=session.get('user_name', 'Admin')) }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

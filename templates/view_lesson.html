@@ -1,0 +1,144 @@
+{% extends "admin_layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>{{ chapter.chapter }}</h2>
+            <p>{{ chapter.description }}</p>
+        </div>
+    </div>
+
+    <!-- Content Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Chapter Content</h4>
+                    {% if session.get('is_admin') %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContentModal">
+                        Add Content
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if chapter.content %}
+                        <div class="list-group">
+                            {% for content in chapter.content %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ content.title }}</h5>
+                                    <small class="text-muted">Type: {{ content.content_type }}</small>
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('download_file', filename=content.file_path) }}" 
+                                       class="btn btn-sm btn-primary">Download</a>
+                                    {% if session.get('is_admin') %}
+                                    <form action="{{ url_for('delete_content', content_id=content.id) }}" 
+                                          method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-danger" 
+                                                onclick="return confirm('Are you sure?')">Delete</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No content available for this chapter.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quizzes Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Chapter Quizzes</h4>
+                    {% if session.get('is_admin') %}
+                    <a href="{{ url_for('add_quiz', chapter_id=chapter.id) }}" class="btn btn-primary">
+                        Add Quiz
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if quizzes %}
+                        <div class="list-group">
+                            {% for quiz in quizzes %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ quiz.title }}</h5>
+                                    <small class="text-muted">
+                                        Duration: {{ quiz.duration }} minutes | 
+                                        Total Marks: {{ quiz.totalMarks }} | 
+                                        Questions: {{ quiz.totalNoQues }}
+                                    </small>
+                                    <p class="mb-1">Deadline: {{ quiz.deadline.strftime('%Y-%m-%d %H:%M') }}</p>
+                                </div>
+                                <div>
+                                    {% if session.get('is_admin') %}
+                                        <a href="{{ url_for('add_questions', quiz_id=quiz.id) }}" 
+                                           class="btn btn-sm btn-primary">Add Questions</a>
+                                    {% else %}
+                                        <a href="{{ url_for('start_quiz', quiz_id=quiz.id) }}" 
+                                           class="btn btn-sm btn-success">Take Quiz</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No quizzes available for this chapter.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Content Modal -->
+{% if session.get('is_admin') %}
+<div class="modal fade" id="addContentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Content</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('add_content', chapter_id=chapter.id) }}" 
+                      method="POST" enctype="multipart/form-data">
+                    <!-- Video Upload -->
+                    <div class="mb-3">
+                        <label class="form-label">Video:</label>
+                        <input type="file" class="form-control" name="video" accept=".mp4">
+                    </div>
+                    
+                    <!-- PDF Upload -->
+                    <div class="mb-3">
+                        <label class="form-label">PDF:</label>
+                        <input type="file" class="form-control" name="pdf" accept=".pdf">
+                    </div>
+                    
+                    <!-- PPT Upload -->
+                    <div class="mb-3">
+                        <label class="form-label">PowerPoint:</label>
+                        <input type="file" class="form-control" name="ppt" accept=".ppt,.pptx">
+                    </div>
+                    
+                    <!-- DOC Upload -->
+                    <div class="mb-3">
+                        <label class="form-label">Document:</label>
+                        <input type="file" class="form-control" name="doc" accept=".doc,.docx">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

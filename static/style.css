@@ -241,3 +241,14 @@ body.try {
     color: maroon !important;
     margin: auto;
 }
+
+.chapter-section {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+}
+.chapter-section:last-child {
+    border-bottom: none;
+}
+.content-section, .quiz-section {
+    margin-left: 1rem;
+}

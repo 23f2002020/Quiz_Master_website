@@ -1,0 +1,17 @@
+{% extends "admin_layout.html" %}
+{% block content %}
+    <div class="container text-center">
+        <h3>Added New subject</h3>
+        <form method="POST" action="{{ url_for('subject_adding') }}">
+            <div class="form-group">
+                <label for="subject_name">Subject Name:</label>
+                <input type="text" class="form-control" id="subject_name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea class="form-control" id="description" name="description" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">submit</button>
+        </form>
+    </div>
+{% endblock %}
