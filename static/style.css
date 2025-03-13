@@ -252,3 +252,26 @@ body.try {
 .content-section, .quiz-section {
     margin-left: 1rem;
 }
+
+.question-review {
+    margin: 10px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+.question-review h5 {
+    margin-bottom: 10px;
+}
+.question-review p {
+    margin: 5px 0;
+}
+.quiz-review {
+    margin-top: 20px;
+}
+
+
+.highlight {
+    background-color: yellow;
+    font-weight: bold;
+}

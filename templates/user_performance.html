@@ -1,0 +1,26 @@
+{% extends "admin_layout.html" %}
+{% block content %}
+<div class="container">
+    <h2>{{ user.fullname }}'s Performance</h2>
+    
+    <!-- Overall Performance -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Overall Performance</h4>
+        </div>
+        <div class="card-body">
+            <img src="data:image/png;base64,{{ overall_bar_chart_image }}" alt="Overall Performance Bar Chart">
+        </div>
+    </div>
+
+    <!-- Subject-wise Performance -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Subject-wise Performance</h4>
+        </div>
+        <div class="card-body">
+            <img src="data:image/png;base64,{{ subject_bar_chart_image }}" alt="Subject-wise Performance Bar Chart">
+        </div>
+    </div>
+</div>
+{% endblock %}

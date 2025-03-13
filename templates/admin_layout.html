@@ -24,23 +24,23 @@
             <div class="collapse navbar-collapse" id="navbarText">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="#">Home</a>
+                    <a class="nav-link active" aria-current="page" href="{{ url_for('admin_dashboard', Name=user_info.fullname if user_info else 'Admin') }}">Home</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Quiz</a>
+                    <a class="nav-link" href="{{ url_for('students_details') }}">StudentsDetails</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Summary</a>
+                    <a class="nav-link" href="{{ url_for('overall_performance') }}">Summary</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Logout</a>
+                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
                 </li>
                 </ul>
                 <nav class="navbar bg-body-tertiary">
                     <div class="container-fluid">
                     
-                    <form class="d-flex" role="search">
-                        <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+                    <form class="d-flex" role="search" action="{{ url_for('search') }}" method="GET">
+                        <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" name="query" >
                         <button class="btn btn-outline-success" type="submit">Search</button>
                     </form>
                     </div>
@@ -60,3 +60,15 @@
     </body>
 
 </html>
+
+<script>
+    function handleSearch(event) {
+        event.preventDefault(); // Prevent form submission
+        const query = document.getElementById('searchQuery').value;
+        if (query.trim() === "") {
+            alert("Please enter a search term.");
+            return;
+        }
+        window.location.href = `/search?query=${encodeURIComponent(query)}`;
+    }
+    </script>

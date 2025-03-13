@@ -32,6 +32,7 @@
                                             class="btn btn-primary">Start Quiz</a>
                                         {% else %}
                                             <button class="btn btn-secondary" disabled>Already Attempted</button>
+                                            <a href="{{ url_for('quiz_result', result_id=quiz_results[quiz.id]) }}" class="btn btn-info mt-2">Review Quiz</a>
                                         {% endif %}
                                     {% else %}
                                         <button class="btn btn-danger" disabled>Expired</button>

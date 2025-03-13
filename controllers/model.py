@@ -12,7 +12,7 @@ class User_Info(db.Model):
     fullname = db.Column(db.String(120), nullable=False)
     qualification = db.Column(db.String, nullable=False)    
     dob = db.Column(db.Date, nullable=False)
-    quiz = db.relationship('QuizResult',cascade='all, delete', backref=db.backref('User_info_ref', lazy='select'), lazy='select')
+    quiz = db.relationship('QuizResult',cascade='all, delete', backref=db.backref('User_info_ref', lazy='select'), lazy=True)
 
 
 class Subject(db.Model):
@@ -20,7 +20,7 @@ class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=True)
-    chapters = db.relationship('Chapter', backref=db.backref('subject_ref', lazy='select'), lazy='select')
+    chapters = db.relationship('Chapter', backref=db.backref('subject_ref', lazy='select'), lazy=True)
     # def __repr__(self):
     #     return f'<Subject {self.subject}>'
 
@@ -36,7 +36,7 @@ class Quiz(db.Model):
     totalMarks = db.Column(db.Integer, default=0)
     passingMarks = db.Column(db.Integer, default=0)
     duration = db.Column(db.Integer, nullable=True)
-    questions = db.relationship('Question', backref=db.backref('quiz_ref', lazy='select'),lazy='select')
+    questions = db.relationship('Question', back_populates='quiz',cascade="all, delete-orphan")
     
 
 
@@ -72,7 +72,7 @@ class Question(db.Model):
     __tablename__ = 'question'
     id = db.Column(db.Integer, primary_key=True)    
     quiz_id = db.Column(db.Integer, db.ForeignKey('Quiz.id'), nullable=False)
-    question = db.Column(db.String, nullable=False)
+    question = db.Column(db.Text, nullable=False)
     question_type = db.Column(db.String(20), nullable=False)  # 'mcq' or 'numeric'
     marks = db.Column(db.Integer, nullable=False)
     numeric_answer = db.Column(db.Float, nullable=True)
@@ -81,12 +81,12 @@ class Question(db.Model):
     option2 = db.Column(db.String, nullable=True)
     option3 = db.Column(db.String, nullable=True)
     option4 = db.Column(db.String, nullable=True)
-    correct = db.Column(db.Boolean, nullable=True)
+    correct = db.Column(db.String, nullable=True)
     explanation = db.Column(db.String, nullable=True)
     answer_type = db.Column(db.String, nullable=True, default="MCQ")
     
-    quiz = db.relationship('Quiz', backref='question')
-    user_answers = db.relationship('UserAnswers', back_populates='question', lazy=True)
+    quiz = db.relationship('Quiz', back_populates='questions')
+    user_answers = db.relationship('UserAnswers', back_populates='question', lazy='select',overlaps="user_answers,UserAnswers")
 
 class QuizResult(db.Model):
     __tablename__ = 'QuizResult'
@@ -95,17 +95,21 @@ class QuizResult(db.Model):
     quiz_id = db.Column(db.Integer, db.ForeignKey('Quiz.id'), nullable=False)
     score = db.Column(db.Integer, default=0)
     date_taken = db.Column(db.DateTime, default=datetime.utcnow)
-
+    time_taken = db.Column(db.Integer, nullable=False)
+    quiz = db.relationship('Quiz', backref='quiz_results')
+    
 class UserAnswers(db.Model):
     __tablename__ = 'UserAnswers'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user_info.id'), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('Quiz.id'), nullable=False)
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
     selected_answer = db.Column(db.Text, nullable=True) 
     numeric_answer = db.Column(db.Float, nullable=True)  # Store the actual answer text
     is_correct = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    user_info = db.relationship('User_Info', backref='UserAnswers')
-    question = db.relationship('Question', backref='UserAnswers')
+    user_info = db.relationship('User_Info', backref='user_answers')
+    question = db.relationship('Question', back_populates='user_answers')
+    quiz = db.relationship('Quiz', backref='user_answers')
 
     

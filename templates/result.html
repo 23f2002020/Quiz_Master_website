@@ -1,0 +1,48 @@
+{% extends "user_layout.html" %}
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header text-center">
+            <h2> Quiz Results</h2>
+        </div>
+        <div class="card-body text-center">
+            <h4> Your Mark: <span class="text-primary">{{result.score}}</span> Out of <span class="text-success">{{quiz.totalMarks}}</span></h4>
+            <p> Quiz Title: <strong>{{quiz.title}}</strong></p>
+            <p> Time Taken: {{ (result.time_taken // 3600) }} hours: {{ ((result.time_taken % 3600) // 60) }} minutes {{ (result.time_taken % 60) }} seconds</p>
+            <p> Date of attempt: {{result.date_taken.strftime('%Y-%m-%d %H:%M')}} </p>
+            </div>
+            <h3 class="mt-4 text - center">Review Your Answers</h3>
+            <div class="card body quiz-review">
+                {% for question in question_details %}
+                <div class="question-review mb-4">
+                    <h5>Question {{ loop.index }}:</h5>
+                    <p>{{ question.question }}</p>
+                    
+                    {% if question.question_type == 'mcq' %}
+                        <p><strong>Your Answer:</strong> {{ question.user_answer }}</p>
+                        <p><strong>Correct Answer:</strong> {{ question.correct_answer }} ({{ question.correct_option_text }})</p>
+                    {% elif question.question_type == 'numeric' %}
+                        <p><strong>Your Answer:</strong> {{ question.numeric_answer }}</p>
+                        <p><strong>Correct Answer:</strong> {{ question.correct_answer }} </p>
+                    {% endif %}
+                    
+                    <p><strong>Result:</strong> 
+                        {% if question.is_correct %}
+                            <span class="text-success">Correct</span>
+                        {% else %}
+                            <span class="text-danger">Incorrect</span>
+                        {% endif %}
+                    </p>
+                    
+                    {% if question.explanation %}
+                        <p><strong>Explanation:</strong> {{ question.explanation }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <a href="{{ url_for('user_interface' ,id=session.get('user_id'))}}" class="btn btn-primary">Return to Dashboard</a>
+        </div>
+    
+</div>
+{% endblock %}

@@ -42,7 +42,7 @@
                 <form action="{{ url_for('attempt_quiz', quiz_id=quiz.id) }}" method="POST">
                     <button type="submit" class="btn btn-primary btn-lg">Start Quiz</button>
                 </form>
-                <a href="{{ url_for('user_interface') }}" class="btn btn-secondary mt-2">Back to Dashboard</a>
+                <a href="{{ url_for('user_interface' , id=session.get('user_id')) }}" class="btn btn-secondary mt-2">Back to Dashboard</a>
             </div>
         </div>
     </div>

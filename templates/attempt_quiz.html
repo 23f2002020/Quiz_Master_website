@@ -13,55 +13,45 @@
                 {% for question in quiz.questions %}
                 <div class="question-container mb-4">
                     <h5>Question {{ loop.index }}:</h5>
-                    <p>{{ question.question_text }}</p>
-                    
+                    <p>{{ question.question }}</p>  <!-- ✅ Fixed variable name -->
+
                     {% if question.question_type == 'mcq' %}
                     <div class="options">
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" 
-                                   name="q{{ question.id }}" value="A"
-                                   id="q{{ question.id }}_A">
+                            <input class="form-check-input" type="radio" name="q{{ question.id }}" value="{{ question.option1 }}" id="q{{ question.id }}_A">
                             <label class="form-check-label" for="q{{ question.id }}_A">
-                                {{ question.option_a }}
+                                {{ question.option1 }}
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" 
-                                   name="q{{ question.id }}" value="B"
-                                   id="q{{ question.id }}_B">
+                            <input class="form-check-input" type="radio" name="q{{ question.id }}" value="{{ question.option2 }}" id="q{{ question.id }}_B">
                             <label class="form-check-label" for="q{{ question.id }}_B">
-                                {{ question.option_b }}
+                                {{ question.option2 }}
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" 
-                                   name="q{{ question.id }}" value="C"
-                                   id="q{{ question.id }}_C">
+                            <input class="form-check-input" type="radio" name="q{{ question.id }}" value="{{ question.option3 }}" id="q{{ question.id }}_C">
                             <label class="form-check-label" for="q{{ question.id }}_C">
-                                {{ question.option_c }}
+                                {{ question.option3 }}
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" 
-                                   name="q{{ question.id }}" value="D"
-                                   id="q{{ question.id }}_D">
+                            <input class="form-check-input" type="radio" name="q{{ question.id }}" value="{{ question.option4 }}" id="q{{ question.id }}_D">
                             <label class="form-check-label" for="q{{ question.id }}_D">
-                                {{ question.option_d }}
+                                {{ question.option4 }}
                             </label>
                         </div>
                     </div>
                     {% elif question.question_type == 'numeric' %}
                     <div class="form-group">
-                        <input type="number" step="any" class="form-control" 
-                               name="q{{ question.id }}" 
-                               placeholder="Enter your numeric answer">
+                        <input type="number" step="any" class="form-control" name="q{{ question.id }}" placeholder="Enter your numeric answer">
                         <small class="form-text text-muted">Enter a numeric value</small>
                     </div>
                     {% endif %}
                 </div>
                 {% endfor %}
-                
-                <button type="submit" class="btn btn-primary">Submit Quiz</button>
+
+                <button type="submit" class="btn btn-primary" id="submit-button">Submit Quiz</button>
             </form>
         </div>
     </div>
@@ -71,7 +61,7 @@
 function startTimer(duration, display) {
     var timer = duration;
     var minutes, seconds;
-    
+
     var countdown = setInterval(function () {
         minutes = parseInt(timer / 60, 10);
         seconds = parseInt(timer % 60, 10);
@@ -83,7 +73,8 @@ function startTimer(duration, display) {
 
         if (--timer < 0) {
             clearInterval(countdown);
-            document.getElementById('quiz-form').submit();
+            document.getElementById('submit-button').disabled = true;  // ✅ Disable submit button
+            document.getElementById('submit-button').innerText = "Time Over";
         }
     }, 1000);
 }
@@ -93,18 +84,17 @@ window.onload = function () {
     var display = document.querySelector('#time');
     startTimer(timeLeft, display);
     
-    // Prevent form resubmission on page refresh
+    
     if (window.history.replaceState) {
         window.history.replaceState(null, null, window.location.href);
     }
 };
 
-// Warn user before leaving page
+
 window.onbeforeunload = function() {
     return "Are you sure you want to leave? Your quiz progress will be lost!";
 };
 
-// Remove warning when submitting form
 document.getElementById('quiz-form').onsubmit = function() {
     window.onbeforeunload = null;
 };

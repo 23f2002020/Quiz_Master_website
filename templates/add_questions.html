@@ -27,10 +27,9 @@
                         <input type="hidden" name="question_type" value="{{ question_type }}">
                         
                         <!-- Question Text -->
-                        <div >
-                            <label for="question" class="form-label">Question Text:</label>
-                            <textarea class="form-control" id="question" name="question" 
-                                    rows="3" required></textarea>
+                        <div class="form-group">
+                            <label for="question" >Question Text:</label>
+                            <textarea class="form-control" id="question" name="question" rows="3" required></textarea>
                         </div>
 
                         <!-- Marks -->
@@ -54,11 +53,11 @@
                                 </div>
                                 <div >
                                     <input type="text" class="form-control" name="option3" 
-                                           placeholder="Option C" required>
+                                           placeholder="Option C" >
                                 </div>
                                 <div >
                                     <input type="text" class="form-control" name="option4" 
-                                           placeholder="Option D" required>
+                                           placeholder="Option D" >
                                 </div>
                         
                                 <div >
@@ -100,10 +99,10 @@
                                         rows="3" required></textarea>
                             </div>
                             <div class="text-center mt-4">
-                                <button type="submit" name="add_another" class="btn btn-primary me-2">
+                                <button type="submit" name="add_another" value="true" class="btn btn-primary me-2" {% if remaining_questions == 0 %} disabled {% endif %}>
                                     Save & Add Another
                                 </button>
-                                <button type="submit" class="btn btn-success ">
+                                <button type="submit" name = "save_and_finish"class="btn btn-success ">
                                     Save & Finish
                                 </button>
                                 <a href="{{ url_for('admin_dashboard',Name=Name )}}" class="btn btn-secondary">

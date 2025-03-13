@@ -1,0 +1,78 @@
+{% extends "admin_layout.html" %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Search Results for "{{ query }}"</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Subjects Section -->
+    {% if subjects %}
+        <h3>Subjects</h3>
+        <ul class="list-group">
+            {% for subject in subjects %}
+                <li class="list-group-item">
+                    <a href="{{ url_for('admin_dashboard', chapter_id=subject.chapters[0].id) if subject.chapters else '#' }}">
+                        {{ subject.subject | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <!-- Chapters Section -->
+    {% if chapters %}
+        <h3>Chapters</h3>
+        <ul class="list-group">
+            {% for chapter in chapters %}
+                <li class="list-group-item">
+                    <a href="{{ url_for('admin_dashboard', chapter_id=chapter.id) }}">
+                        {{ chapter.chapter | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <!-- Quizzes Section -->
+    {% if quizzes %}
+        <h3>Quizzes</h3>
+        <ul class="list-group">
+            {% for quiz in quizzes %}
+                <li class="list-group-item">
+                    <a href="{{ url_for('start_quiz', quiz_id=quiz.id) }}">
+                        {{ quiz.title | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <!-- Users Section -->
+    {% if users %}
+        <h3>Users</h3>
+        <ul class="list-group">
+            {% for user in users %}
+                <li class="list-group-item">
+                    <a href="{{ url_for('user_performance', user_id=user.id) }}">
+                        {{ user.fullname | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if not subjects and not chapters and not quizzes and not users %}
+        <p class="text-center text-muted">No results found.</p>
+    {% endif %}
+</div>
+{% endblock %}

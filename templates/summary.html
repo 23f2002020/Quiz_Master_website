@@ -1,0 +1,26 @@
+{% extends "user_layout.html" %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">{{ user_info.fullname }}'s Performance Summary</h2>
+
+    <!-- Subject-wise Performance Bar Chart -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Subject-wise Performance</h4>
+        </div>
+        <div class="card-body">
+            <img src="data:image/png;base64,{{ bar_chart_image }}" alt="Subject-wise Performance Bar Chart" class="img-fluid">
+        </div>
+    </div>
+
+    <!-- Overall Quiz Completion Pie Chart -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Overall Quiz Completion</h4>
+        </div>
+        <div class="card-body">
+            <img src="data:image/png;base64,{{ pie_chart_image }}" alt="Overall Quiz Completion Pie Chart" class="img-fluid">
+        </div>
+    </div>
+</div>
+{% endblock %}

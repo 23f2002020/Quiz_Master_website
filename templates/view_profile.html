@@ -1,0 +1,46 @@
+{% extends "user_layout.html" %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">{{ user_info.fullname }}'s Profile</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Profile Form -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Profile Details</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('view_profile', user_id=user_info.id) }}">
+                <div class="form-group ">
+                    <label for="fullname">Full Name:</label>
+                    <input type="text" class="form-control" id="fullname" name="fullname" value="{{ user_info.fullname }}">
+                </div>
+                <div class="form-group ">
+                    <label for="email">Email:</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ user_info.email }}">
+                </div>
+                <div class="form-group ">
+                    <label for="qualification">Qualification:</label>
+                    <input type="text" class="form-control" id="qualification" name="qualification" value="{{ user_info.qualification }}">
+                </div>
+                <div class="form-group ">
+                    <label for="dob">Date of Birth:</label>
+                    <input type="date" class="form-control" id="dob" name="dob" value="{{ user_info.dob }}">
+                </div>
+                <button type="submit" class="btn btn-primary">Update Profile</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

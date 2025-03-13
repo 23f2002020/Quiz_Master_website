@@ -1,0 +1,24 @@
+{% extends "admin_layout.html" %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Overall Student Performance by Subject</h2>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Average Scores by Subject</h4>
+        </div>
+        <div class="card-body">
+            <img src="data:image/png;base64,{{ avg_score_chart_image }}" alt="Average Scores by Subject" class="img-fluid">
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Student Interest by Subject (Quiz Attempts)</h4>
+        </div>
+        <div class="card-body">
+            <img src="data:image/png;base64,{{ quiz_attempts_chart_image }}" alt="Quiz Attempts by Subject" class="img-fluid">
+        </div>
+    </div>
+</div>
+{% endblock %}

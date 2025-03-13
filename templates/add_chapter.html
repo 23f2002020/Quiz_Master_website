@@ -2,43 +2,44 @@
 {% block content %}
     <div class="container text-center">
         <h3>Added New chapter to {{ subject.subject }}</h3>
-        <form method="POST" >
+        <form method="POST" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="chapter_name">Chapter Name:</label>
-                <input type="text" class="form-control" id="subject_name" name="chapter_name" required>
+                <input type="text" class="form-control" id="chapter_name" name="chapter_name" required>
             </div>
             <div class="form-group">
                 <label for="description">Description:</label>
                 <textarea class="form-control" id="description" name="chapter_description" required></textarea>
             </div>
-
-            
-
-            
+        
             <div class="content-uploads mb-4">
                 <h4>Upload Content</h4>
-
-            <div class="form-group ">
-                <label for="Video">Video:</label>
-                <input type="file" class="form-control" id="Video" name="Video" accept="video/*">
+        
+                <!-- Video Upload -->
+                <div class="form-group">
+                    <label for="video">Video:</label>
+                    <input type="file" class="form-control" id="video" name="video" accept="video/*">
+                </div>
+        
+                <!-- PDF Upload -->
+                <div class="form-group">
+                    <label for="pdf">PDF:</label>
+                    <input type="file" class="form-control" id="pdf" name="pdf" accept=".pdf">
+                </div>
+        
+                <!-- PPT Upload -->
+                <div class="form-group">
+                    <label for="ppt">PPT:</label>
+                    <input type="file" class="form-control" id="ppt" name="ppt" accept=".ppt,.pptx">
+                </div>
+        
+                <!-- Word Document Upload -->
+                <div class="form-group">
+                    <label for="word">Word Document:</label>
+                    <input type="file" class="form-control" id="word" name="word" accept=".doc,.docx">
+                </div>
             </div>
-
-            <div class="form-group ">
-                <label for="Video">PDF:</label>
-                <input type="file" class="form-control" id="pdf" name="pdf" accept=".pdf">
-            </div>
-
-            <div class="form-group ">
-                <label for="Video">PPT:</label>
-                <input type="file" class="form-control" id="ppt" name="ppt" accept=".ppt,.pptx">
-            </div>
-
-            <div class="form-group ">
-                <label for="Video">Word Document:</label>
-                <input type="file" class="form-control" id="word" name="docs" accept=".doc,.docx">
-            </div>
-            </div>
-
+        
             <button type="submit" class="btn btn-primary">Save Chapter</button>
             <a href="{{ url_for('admin_dashboard', Name=Name, subject_id=subject.id) }}" class="btn btn-secondary">Cancel</a>
         </form>
