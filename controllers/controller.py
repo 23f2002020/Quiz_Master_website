@@ -388,7 +388,7 @@ def get_chapters():
 
 @app.route("/start_quiz/<int:quiz_id>", methods=["GET"])
 def start_quiz(quiz_id):
-    user_id = session.get("user_id")
+    user_info = session.get("user_id")
     quiz = Quiz.query.get_or_404(quiz_id)
     questions = Question.query.filter_by(quiz_id=quiz_id).all()
 
@@ -399,40 +399,68 @@ def start_quiz(quiz_id):
     if QuizResult.query.filter_by(user_id=session.get('user_info.id'),quiz_id=quiz_id).first():
         flash('You have already attempted this quiz', 'error')
         return redirect(url_for('user_interface', id=session.get("user_id")))
-    return render_template('start_quiz.html', quiz=quiz,questions=questions)
+    return render_template('start_quiz.html', quiz=quiz,questions=questions, user_info=user_info)
 
-@app.route("/attempt_quiz/<int:quiz_id>" , methods=["POST","GET"])
+@app.route("/attempt_quiz/<int:quiz_id>", methods=["POST", "GET"])
 def attempt_quiz(quiz_id):
     quiz = Quiz.query.get_or_404(quiz_id)
+    user_info = session.get('user_info')
+    # user_info_id = user_info.id  # Ensure user_info is always defined
 
     if request.method == "POST":
-        session['quiz_start_time']=datetime.now().timestamp()
-        session['quiz_id']=quiz_id
-        session['quiz_answers']={}
+        session['quiz_start_time'] = float(datetime.now().timestamp())
+        session['quiz_id'] = quiz_id
+        session['quiz_answers'] = {}
 
-        return render_template("attempt_quiz.html",quiz=quiz, current_question=0, start_time=session['quiz_start_time'])
-    if 'quiz_start_time' not in session or session['quiz_id'] != quiz_id:
+        return render_template(
+            "attempt_quiz.html",
+            quiz=quiz,
+            current_question=0,
+            start_time=session['quiz_start_time'],
+            user_info=user_info
+        )
+
+    if 'quiz_start_time' not in session or session.get('quiz_id') != quiz_id:
         return redirect(url_for('start_quiz', quiz_id=quiz_id))
+
     
-    time_spent = datetime.now().timestamp()-session['quiz_start_time']
-    remaining_time = max(0, quiz.duration * 60 - time_spent)
+    try:
+        quiz_duration = int(quiz.duration)
+    except ValueError:
+        flash("Error: Quiz duration is not a valid number.", "error")
+        return redirect(url_for('start_quiz', quiz_id=quiz_id))
+
     
+    time_spent = datetime.now().timestamp() - session.get('quiz_start_time', datetime.now().timestamp())
+
+
+    remaining_time = max(0, quiz_duration * 60 - int(time_spent))
+
+
     if remaining_time <= 0:
         return submit_quiz(quiz_id)
-    return render_template('attempt_quiz.html', quiz=quiz, remaining_time=remaining_time)
+
+    return render_template(
+        'attempt_quiz.html',
+        quiz=quiz,
+        remaining_time=remaining_time,
+        user_info=user_info
+    )
+
 
 @app.route("/submit_quiz/<int:quiz_id>", methods=["POST"])
 def submit_quiz(quiz_id):
     quiz = Quiz.query.get_or_404(quiz_id)
     questions = Question.query.filter_by(quiz_id=quiz_id).all()
-    user_id = session.get("user_id")
+    user_id = int(session.get("user_id"))
 
-    # Ensure user has started the quiz
+    # ✅ Ensure user has started the quiz
     if 'quiz_start_time' not in session:
         flash("Error: No active quiz session found.", "error")
         return redirect(url_for("user_interface", id=user_id))
 
-    start_time = datetime.fromtimestamp(session['quiz_start_time'])
+    # ✅ Convert session start time to float before using datetime.fromtimestamp()
+    start_time = datetime.fromtimestamp(float(session['quiz_start_time']))
     end_time = datetime.now()
     time_taken = (end_time - start_time).total_seconds()  # Store time in seconds
 
@@ -440,28 +468,32 @@ def submit_quiz(quiz_id):
     answers = {}
 
     for question in questions:
-        question_id = str(question.id)
+        question_id = int(question.id)  # ✅ Ensure question_id is an integer
         answer_key = f"q{question_id}"
         selected_answer = request.form.get(answer_key)
-        
+        is_correct = False
+        numeric_answer = None  # ✅ Initialize numeric_answer
 
         if selected_answer:
-            is_correct = False
-            
             if question.question_type == "numeric":
                 try:
                     selected_answer = float(selected_answer)  
                     correct_answer = float(question.numeric_answer)
                     tolerance = float(question.tolerance) if question.tolerance else 0.0
-                    if selected_answer == tolerance:
+
+                    # ✅ Compare correctly within tolerance range
+                    if abs(selected_answer - correct_answer) <= tolerance:
                         is_correct = True
                         score += question.marks
                     numeric_answer = selected_answer
                 except ValueError:
                     flash(f"Invalid numeric input for question {question_id}", "error")
                     return redirect(url_for("start_quiz", quiz_id=quiz_id))
-            else:  
+
+            else:  # Multiple Choice Questions (MCQ)
                 correct_answer_letter = question.correct
+                correct_answer = None
+
                 if correct_answer_letter == 'A':
                     correct_answer = question.option1
                 elif correct_answer_letter == 'B':
@@ -470,45 +502,54 @@ def submit_quiz(quiz_id):
                     correct_answer = question.option3
                 elif correct_answer_letter == 'D':
                     correct_answer = question.option4
-                else:
-                    correct_answer = None
+
                 if selected_answer == correct_answer:
                     is_correct = True
                     score += question.marks
 
+            # ✅ Store answers in the dictionary
             answers[question_id] = selected_answer  
 
-        
-           
+            # ✅ Store user answers in the database
             user_answer = UserAnswers(
                 user_id=user_id,
                 quiz_id=quiz_id,
                 question_id=question_id,
                 selected_answer=selected_answer if question.question_type != "numeric" else None,  
-                numeric_answer=numeric_answer if question.question_type == "numeric" else None ,    
+                numeric_answer=numeric_answer if question.question_type == "numeric" else None,    
                 is_correct=is_correct
             )
             db.session.add(user_answer)
+
+    # ✅ Save quiz result
     quiz_result = QuizResult(
         user_id=user_id,
         quiz_id=quiz_id,
         score=score,
         date_taken=start_time,
-        time_taken=time_taken
+        time_taken=int(time_taken)  # ✅ Ensure time_taken is stored as an integer
     )
     db.session.add(quiz_result)
 
+    # ✅ Commit all database changes
     db.session.commit()
 
-    if "quiz_results" not in session:
-        session["quiz_results"] = {}
-    session["quiz_results"][quiz_id] = quiz_result.id
-    
+    # ✅ Clean up session data
     session.pop('quiz_start_time', None)
     session.pop('quiz_id', None)
 
-    
     return redirect(url_for('quiz_result', result_id=quiz_result.id))
+
+
+    # if "quiz_results" not in session:
+    #     session["quiz_results"] = {}
+    # session["quiz_results"][quiz_id] = quiz_result.id
+    
+    # session.pop('quiz_start_time', None)
+    # session.pop('quiz_id', None)
+
+    
+    # return redirect(url_for('quiz_result', result_id=quiz_result.id))
 
 
 @app.route("/quiz_result/<int:result_id>")
@@ -516,6 +557,7 @@ def quiz_result(result_id):
     result = QuizResult.query.get_or_404(result_id)
     quiz = Quiz.query.filter_by(id=result.quiz_id).first()
     user_answers = UserAnswers.query.filter_by(user_id=result.user_id, quiz_id=result.quiz_id).all()
+    user_info = User_Info.query.get(result.user_id)
     questions = Question.query.filter_by(quiz_id=result.quiz_id).all()
     question_details = []
     for question in questions:
@@ -543,7 +585,7 @@ def quiz_result(result_id):
             "explanation": question.explanation
         })
     
-    return render_template('result.html', result=result, quiz=quiz, question_details=question_details)
+    return render_template('result.html', result=result, quiz=quiz, question_details=question_details,user_info=user_info)
     
 
 @app.route("/delete_content/<int:content_id>", methods=["POST"])
