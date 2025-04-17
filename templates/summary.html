@@ -1,26 +1,407 @@
 {% extends "user_layout.html" %}
 {% block content %}
-<div class="container">
-    <h2 class="mb-4">{{ user_info.fullname }}'s Performance Summary</h2>
-
-    <!-- Subject-wise Performance Bar Chart -->
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h4 class="mb-0">Subject-wise Performance</h4>
-        </div>
-        <div class="card-body">
-            <img src="data:image/png;base64,{{ bar_chart_image }}" alt="Subject-wise Performance Bar Chart" class="img-fluid">
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-0">{{ user_info.fullname }}'s Performance Dashboard</h2>
+                        <p class="text-muted mb-0">Track your learning progress and improvement</p>
+                    </div>
+                    <div class="badge bg-primary p-2">
+                        <i class="fas fa-chart-line me-1"></i> {{ quick_stats.performance_label }} Performance
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Overall Quiz Completion Pie Chart -->
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h4 class="mb-0">Overall Quiz Completion</h4>
+    <!-- Quick Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-primary border-5 h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                Total Quizzes</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ quick_stats.total_quizzes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <img src="data:image/png;base64,{{ pie_chart_image }}" alt="Overall Quiz Completion Pie Chart" class="img-fluid">
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-success border-5 h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                Completed Quizzes</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ quick_stats.completed }}</div>
+                            <div class="mt-2 text-xs text-muted">
+                                {{ (quick_stats.completed/quick_stats.total_quizzes*100)|round(1) }}% Completion
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-warning border-5 h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                                Average Score</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ quick_stats.avg_score|round(1) }}%</div>
+                            <div class="mt-2 text-xs text-muted">
+                                {% if quick_stats.improvement_rate > 0 %}
+                                    <i class="fas fa-arrow-up text-success"></i> +{{ quick_stats.improvement_rate|round(1) }}% improvement
+                                {% elif quick_stats.improvement_rate < 0 %}
+                                    <i class="fas fa-arrow-down text-danger"></i> {{ quick_stats.improvement_rate|round(1) }}% decline
+                                {% else %}
+                                    Steady performance
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-percentage fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-danger border-5 h-100 py-2">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
+                                Incomplete/Missed</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ quick_stats.incomplete }}</div>
+                            <div class="mt-2 text-xs text-muted">
+                                {{ (quick_stats.incomplete/quick_stats.total_quizzes*100)|round(1) }}% Missed
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Tabs -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header border-bottom">
+                    <ul class="nav nav-tabs card-header-tabs" id="dashboardTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="performance-tab" data-bs-toggle="tab" href="#performance" role="tab">
+                                <i class="fas fa-chart-bar me-1"></i> Performance
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="comparison-tab" data-bs-toggle="tab" href="#comparison" role="tab">
+                                <i class="fas fa-users me-1"></i> Class Comparison
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="suggestions-tab" data-bs-toggle="tab" href="#suggestions" role="tab">
+                                <i class="fas fa-lightbulb me-1"></i> Improvement Tips
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="dashboardTabsContent">
+                        <!-- Performance Tab -->
+                        <div class="tab-pane fade show active" id="performance" role="tabpanel">
+                            <div class="row">
+                                <!-- Subject Performance -->
+                                <div class="col-xl-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Subject-wise Performance</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <img src="data:image/png;base64,{{ charts.subject_performance }}" class="img-fluid" alt="Subject Performance">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Quiz Completion -->
+                                <div class="col-xl-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Quiz Completion Status</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <img src="data:image/png;base64,{{ charts.completion_status }}" class="img-fluid" alt="Completion Status">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Performance Trend -->
+                                <div class="col-xl-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Performance Trend</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            {% if charts.performance_trend %}
+                                                <img src="data:image/png;base64,{{ charts.performance_trend }}" class="img-fluid" alt="Performance Trend">
+                                            {% else %}
+                                                <div class="alert alert-info">Not enough data to show performance trend</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Time Management -->
+                                <div class="col-xl-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Time Management</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            {% if charts.time_management %}
+                                                <img src="data:image/png;base64,{{ charts.time_management }}" class="img-fluid" alt="Time Management">
+                                            {% else %}
+                                                <div class="alert alert-info">Time data not available</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Class Comparison Tab -->
+                        <div class="tab-pane fade" id="comparison" role="tabpanel">
+                            <div class="row">
+                                <div class="col-lg-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Class Comparison</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            {% if charts.class_comparison %}
+                                                <img src="data:image/png;base64,{{ charts.class_comparison }}" class="img-fluid" alt="Class Comparison">
+                                            {% else %}
+                                                <div class="alert alert-info">Class comparison data not available</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Weak Areas</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            {% if charts.weak_areas %}
+                                                <img src="data:image/png;base64,{{ charts.weak_areas }}" class="img-fluid" alt="Weak Areas">
+                                            {% else %}
+                                                <div class="alert alert-info">Weak areas analysis not available</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Subject Comparison Details</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Subject</th>
+                                                            <th>Your Average</th>
+                                                            <th>Class Average</th>
+                                                            <th>Difference</th>
+                                                            <th>Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for comp in class_comparison %}
+                                                        <tr>
+                                                            <td>{{ comp.subject }}</td>
+                                                            <td>{{ comp.user_avg|round(1) }}%</td>
+                                                            <td>{{ comp.class_avg|round(1) }}%</td>
+                                                            <td>
+                                                                {% if comp.difference > 0 %}
+                                                                    <span class="text-success">+{{ comp.difference|round(1) }}%</span>
+                                                                {% elif comp.difference < 0 %}
+                                                                    <span class="text-danger">{{ comp.difference|round(1) }}%</span>
+                                                                {% else %}
+                                                                    {{ comp.difference|round(1) }}%
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>
+                                                                {% if comp.difference > 5 %}
+                                                                    <span class="badge bg-success">Above Average</span>
+                                                                {% elif comp.difference < -5 %}
+                                                                    <span class="badge bg-danger">Below Average</span>
+                                                                {% else %}
+                                                                    <span class="badge bg-warning">Average</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Improvement Suggestions Tab -->
+                        <div class="tab-pane fade" id="suggestions" role="tabpanel">
+                            <div class="row">
+                                <div class="col-lg-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0">Personalized Suggestions</h5>
+                                            <span class="badge bg-primary">{{ suggestions|length }} recommendations</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="list-group">
+                                                {% for suggestion in suggestions %}
+                                                <div class="list-group-item list-group-item-action">
+                                                    <div class="d-flex w-100 justify-content-between">
+                                                        <h6 class="mb-1">
+                                                            {% if suggestion.type == 'subject' %}
+                                                                <i class="fas fa-book me-2"></i>
+                                                            {% elif suggestion.type == 'time' %}
+                                                                <i class="fas fa-clock me-2"></i>
+                                                            {% elif suggestion.type == 'progress' %}
+                                                                <i class="fas fa-chart-line me-2"></i>
+                                                            {% else %}
+                                                                <i class="fas fa-lightbulb me-2"></i>
+                                                            {% endif %}
+                                                            {{ suggestion.message }}
+                                                        </h6>
+                                                        <small>
+                                                            {% if suggestion.priority == 'high' %}
+                                                                <span class="badge bg-danger">High Priority</span>
+                                                            {% elif suggestion.priority == 'medium' %}
+                                                                <span class="badge bg-warning">Medium Priority</span>
+                                                            {% elif suggestion.priority == 'positive' %}
+                                                                <span class="badge bg-success">Good Job!</span>
+                                                            {% else %}
+                                                                <span class="badge bg-info">Suggestion</span>
+                                                            {% endif %}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-6 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Study Resources</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="alert alert-info">
+                                                <h6><i class="fas fa-info-circle me-2"></i> Recommended Resources</h6>
+                                                <ul class="mb-0">
+                                                    <li>Review chapter materials for weak subjects</li>
+                                                    <li>Practice with additional quizzes</li>
+                                                    <li>Watch tutorial videos on difficult topics</li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <div class="alert alert-success">
+                                                <h6><i class="fas fa-check-circle me-2"></i> Effective Study Techniques</h6>
+                                                <ul class="mb-0">
+                                                    <li>Spaced repetition for better retention</li>
+                                                    <li>Active recall practice</li>
+                                                    <li>Interleaved learning of different subjects</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Performance Goals</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-4 mb-3">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h6>Short-term Goal</h6>
+                                                            <div class="progress mt-2">
+                                                                <div class="progress-bar bg-success" role="progressbar" style="width: 40%"></div>
+                                                            </div>
+                                                            <small class="text-muted">Improve weak subjects by 10%</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h6>Medium-term Goal</h6>
+                                                            <div class="progress mt-2">
+                                                                <div class="progress-bar bg-info" role="progressbar" style="width: 25%"></div>
+                                                            </div>
+                                                            <small class="text-muted">Reach class average in all subjects</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h6>Long-term Goal</h6>
+                                                            <div class="progress mt-2">
+                                                                <div class="progress-bar bg-primary" role="progressbar" style="width: 15%"></div>
+                                                            </div>
+                                                            <small class="text-muted">Achieve 85%+ overall average</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Bootstrap JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Font Awesome -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
 {% endblock %}

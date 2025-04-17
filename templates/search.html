@@ -15,64 +15,135 @@
         {% endif %}
     {% endwith %}
 
+    <!-- Back to Dashboard Button -->
+    <div class="mb-4">
+        <a href="{{ url_for('admin_dashboard', Name=admin_name) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
     <!-- Subjects Section -->
     {% if subjects %}
-        <h3>Subjects</h3>
-        <ul class="list-group">
-            {% for subject in subjects %}
-                <li class="list-group-item">
-                    <a href="{{ url_for('admin_dashboard', chapter_id=subject.chapters[0].id) if subject.chapters else '#' }}">
-                        {{ subject.subject | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
-                    </a>
-                </li>
-            {% endfor %}
-        </ul>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Subjects</h3>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for subject in subjects %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                {{ subject.subject | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
+                                <small class="text-muted">{{ subject.description }}</small>
+                            </span>
+                            <a href="{{ url_for('view_chapter', chapter_id=subject.chapters[0].id) if subject.chapters else '#' }}" 
+                               class="btn btn-sm btn-primary">
+                                View Content
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     {% endif %}
 
     <!-- Chapters Section -->
     {% if chapters %}
-        <h3>Chapters</h3>
-        <ul class="list-group">
-            {% for chapter in chapters %}
-                <li class="list-group-item">
-                    <a href="{{ url_for('admin_dashboard', chapter_id=chapter.id) }}">
-                        {{ chapter.chapter | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
-                    </a>
-                </li>
-            {% endfor %}
-        </ul>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Chapters</h3>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for chapter in chapters %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                {{ chapter.chapter | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
+                                <small class="text-muted">{{ chapter.description }}</small>
+                            </span>
+                            <a href="{{ url_for('view_chapter', chapter_id=chapter.id) }}" 
+                               class="btn btn-sm btn-primary">
+                                View Chapter
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     {% endif %}
 
     <!-- Quizzes Section -->
     {% if quizzes %}
-        <h3>Quizzes</h3>
-        <ul class="list-group">
-            {% for quiz in quizzes %}
-                <li class="list-group-item">
-                    <a href="{{ url_for('start_quiz', quiz_id=quiz.id) }}">
-                        {{ quiz.title | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
-                    </a>
-                </li>
-            {% endfor %}
-        </ul>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Quizzes</h3>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for quiz in quizzes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                {{ quiz.title | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
+                                <small class="text-muted">{{ quiz.description }}</small>
+                            </span>
+                            <div>
+                                {% if session.get('role') == 0 %}  {# Admin #}
+                                    <a href="{{ url_for('add_questions', quiz_id=quiz.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        Manage Questions
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('start_quiz', quiz_id=quiz.id) }}" 
+                                       class="btn btn-sm btn-success">
+                                        Take Quiz
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     {% endif %}
 
     <!-- Users Section -->
     {% if users %}
-        <h3>Users</h3>
-        <ul class="list-group">
-            {% for user in users %}
-                <li class="list-group-item">
-                    <a href="{{ url_for('user_performance', user_id=user.id) }}">
-                        {{ user.fullname | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
-                    </a>
-                </li>
-            {% endfor %}
-        </ul>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Users</h3>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for user in users %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                {{ user.fullname | replace(query, '<span class="highlight">' + query + '</span>') | safe }}
+                                <small class="text-muted">{{ user.email }}</small>
+                            </span>
+                            <a href="{{ url_for('user_performance', user_id=user.id) }}" 
+                               class="btn btn-sm btn-info">
+                                View Performance
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     {% endif %}
 
     {% if not subjects and not chapters and not quizzes and not users %}
-        <p class="text-center text-muted">No results found.</p>
+        <div class="alert alert-info">
+            <p class="text-center">No results found for "{{ query }}".</p>
+        </div>
     {% endif %}
 </div>
+
+<style>
+    .highlight {
+        background-color: #fff3cd;
+        font-weight: bold;
+        padding: 0 2px;
+        border-radius: 3px;
+    }
+</style>
 {% endblock %}

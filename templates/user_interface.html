@@ -9,6 +9,45 @@
         <div class="card-body">
             {% for chapter in subject.chapters %}
             <div class="chapter-section mb-4">
+                <h5>{{ chapter.chapter }}</h5>
+                <p>{{ chapter.description }}</p>
+                
+                <!-- Chapter Content Section -->
+                {% if chapter.content %}
+                <div class="mb-4">
+                    <h6>Learning Materials:</h6>
+                    <div class="list-group">
+                        {% for content_item in chapter.content %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas 
+                                    {% if content_item.content_type == 'video' %}fa-video
+                                    {% elif content_item.content_type == 'pdf' %}fa-file-pdf
+                                    {% elif content_item.content_type == 'ppt' %}fa-file-powerpoint
+                                    {% else %}fa-file-word
+                                    {% endif %} me-2"></i>
+                                {{ content_item.title }}
+                            </div>
+                            <div class="btn-group">
+                                {% set rel_path = content_item.file_path.replace('\\', '/').split('static/uploads/')[-1] %}
+                                <a href="{{ url_for('download_file', filename=rel_path) }}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   target="_blank">
+                                    View
+                                </a>
+                                <a href="{{ url_for('download_file', filename=rel_path) }}?download=true" 
+                                   class="btn btn-sm btn-outline-success" 
+                                   download="{{ content_item.title }}">
+                                    Download
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            
+        
               
                 {% if chapter.quizzes %}
                 <div class="row">
@@ -21,27 +60,32 @@
                                 <div class="quiz-info mb-2">
                                     <small class="text-muted">
                                         Duration: {{ quiz.duration }} minutes<br>
-                                        Deadline: {{ quiz.deadline.strftime('%Y-%m-%d %H:%M') }}
+                                        Deadline: {{ quiz.deadline.strftime('%Y-%m-%d %H:%M') }}<br>
+                                        Total Marks: {{ quiz.totalMarks }} (Pass: {{ quiz.passingMarks }})
                                     </small>
                                 </div>
                                 
-                                {% if quiz.deadline %}  <!-- Add check for deadline existence -->
+                                <!-- Quiz Action Buttons -->
+                                <div class="d-flex flex-column">
                                     {% if quiz.deadline > now %}
-                                        {% if not quiz.is_attempt(user_info.id) %}
-                                            <a href="{{ url_for('start_quiz', quiz_id=quiz.id) }}" 
-                                            class="btn btn-primary">Start Quiz</a>
+                                        {% if quiz.id in quiz_results %}
+                                            <button class="btn btn-secondary mb-2" disabled>Attempted</button>
+                                            <a href="{{ url_for('quiz_result', result_id=quiz_results[quiz.id].result_id) }}" 
+                                               class="btn btn-info">Review ({{ quiz_results[quiz.id].score }}/{{ quiz.totalMarks }})</a>
                                         {% else %}
-                                            <button class="btn btn-secondary" disabled>Already Attempted</button>
-                                            <a href="{{ url_for('quiz_result', result_id=quiz_results[quiz.id]) }}" class="btn btn-info mt-2">Review Quiz</a>
+                                            <a href="{{ url_for('start_quiz', quiz_id=quiz.id) }}" 
+                                               class="btn btn-primary">Start Quiz</a>
                                         {% endif %}
                                     {% else %}
-                                        <button class="btn btn-danger" disabled>Expired</button>
+                                        {% if quiz.id in quiz_results %}
+                                            <button class="btn btn-secondary mb-2" disabled>Expired (Attempted)</button>
+                                            <a href="{{ url_for('quiz_result', result_id=quiz_results[quiz.id].result_id) }}" 
+                                               class="btn btn-info">Review ({{ quiz_results[quiz.id].score }}/{{ quiz.totalMarks }})</a>
+                                        {% else %}
+                                            <button class="btn btn-danger" disabled>Expired</button>
+                                        {% endif %}
                                     {% endif %}
-                                {% else %}
-                                    <a href="{{ url_for('start_quiz', quiz_id=quiz.id) }}" 
-                                    class="btn btn-primary">Start Quiz</a>
-                                {% endif %}
-
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -56,4 +100,20 @@
     </div>
     {% endfor %}
 </div>
+
+<style>
+    /* Add any custom styles here to maintain your design */
+    .chapter-section {
+        padding: 15px;
+        border-left: 4px solid #007bff;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+    
+    .quiz-info {
+        border-top: 1px solid #eee;
+        padding-top: 10px;
+        margin-top: 10px;
+    }
+</style>
 {% endblock %}

@@ -14,13 +14,16 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Chapter Content</h4>
-                    
-                    
-                    <button type="submit" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContentModal">
-                        Edit Content
-                    </button>
-                    
-            
+                    <div>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContentModal">
+                            Edit Content
+                        </button>
+                        <button type="button" class="btn btn-danger ms-2" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#deleteChapterModal">
+                            Delete Chapter
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     {% if chapter.content %}
@@ -38,10 +41,7 @@
                                           method="POST" class="d-inline">
                                         <button type="submit" class="btn btn-sm btn-danger" 
                                                 onclick="return confirm('Are you sure?')">Delete</button>
-                                                
                                     </form>
-                                   
-                                    
                                 </div>
                             </div>
                             {% endfor %}
@@ -81,116 +81,131 @@
                                     <p class="mb-1">Deadline: {{ quiz.deadline.strftime('%Y-%m-%d %H:%M') }}</p>
                                 </div>
                                 <div>
-                        
-                                 <!-- Preview Button (Opens Modal) -->
-                                 <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#previewQuizModal{{ quiz.id }}">
-                                    Preview
-                                </button>
+                                    <!-- Preview Button (Opens Modal) -->
+                                    <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#previewQuizModal{{ quiz.id }}">
+                                        Preview
+                                    </button>
 
-                                <a href="{{ url_for('edit_quiz', quiz_id=quiz.id) }}" class="btn btn-sm btn-outline-warning ms-2">Edit Deadline</a>
+                                    <a href="{{ url_for('edit_quiz', quiz_id=quiz.id) }}" class="btn btn-sm btn-outline-warning ms-2">Edit Deadline</a>
 
-                                <!-- Edit Questions Button (Opens Modal) -->
-                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editQuizModal{{ quiz.id }}">
-                                    Edit Questions
-                                </button>
-                                
-                                <!-- Delete Quiz Button -->
-                                <form action="{{ url_for('delete_quiz', quiz_id=quiz.id) }}" method="POST" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
-                                </form>
-
+                                    <!-- Edit Questions Button (Opens Modal) -->
+                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editQuizModal{{ quiz.id }}">
+                                        Edit Questions
+                                    </button>
+                                    
+                                    <!-- Delete Quiz Button -->
+                                    <form action="{{ url_for('delete_quiz', quiz_id=quiz.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                                    </form>
+                                </div>
                             </div>
-                        </div>
-                    
 
-                            
                             <!-- Preview Quiz Modal -->
-<div class="modal fade" id="previewQuizModal{{ quiz.id }}" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Preview Quiz: {{ quiz.title }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                {% if quiz.questions %}
-                    {% for question in quiz.questions %}
-                        <p><strong>Q{{ loop.index }}:</strong> {{ question.question }}</p>
-                        <ul>
-                            {% if question.question_type == "mcq" %}
-                                <li>A. {{ question.option1 }}</li>
-                                <li>B. {{ question.option2 }}</li>
-                                <li>C. {{ question.option3 }}</li>
-                                <li>D. {{ question.option4 }}</li>
-                                <p><strong>Correct Answer:</strong> {{ question.correct }}</p>
-                            {% elif question.question_type == "numeric" %}
-                                <p><strong>Correct Answer:</strong> {{ question.numeric_answer }} ± {{ question.tolerance }}</p>
-                            {% endif %}
-                        </ul>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted">No questions added yet.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
+                            <div class="modal fade" id="previewQuizModal{{ quiz.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Preview Quiz: {{ quiz.title }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            {% if quiz.questions %}
+                                                {% for question in quiz.questions %}
+                                                    <p><strong>Q{{ loop.index }}:</strong> {{ question.question }}</p>
+                                                    <ul>
+                                                        {% if question.question_type == "mcq" %}
+                                                            <li>A. {{ question.option1 }}</li>
+                                                            <li>B. {{ question.option2 }}</li>
+                                                            <li>C. {{ question.option3 }}</li>
+                                                            <li>D. {{ question.option4 }}</li>
+                                                            <p><strong>Correct Answer:</strong> {{ question.correct }}</p>
+                                                        {% elif question.question_type == "numeric" %}
+                                                            <p><strong>Correct Answer:</strong> {{ question.numeric_answer }} ± {{ question.tolerance }}</p>
+                                                        {% endif %}
+                                                    </ul>
+                                                {% endfor %}
+                                            {% else %}
+                                                <p class="text-muted">No questions added yet.</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Edit Quiz Modal -->
-                            <!-- Edit Quiz Modal -->
-<div class="modal fade" id="editQuizModal{{ quiz.id }}" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Questions for: {{ quiz.title }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form action="{{ url_for('edit_questions', quiz_id=quiz.id) }}" method="POST">
-                    {% for question in quiz.questions %}
-                        <div >
-                            <label class="form-label">Question {{ loop.index }}</label>
-                            <input type="text" name="question_{{ question.id }}" value="{{ question.question }}" class="form-control" required>
-                            
-                            {% if question.question_type == "mcq" %}
-                                <label>Options:</label>
-                                <input type="text" name="option1_{{ question.id }}" value="{{ question.option1 }}" class="form-control">
-                                <input type="text" name="option2_{{ question.id }}" value="{{ question.option2 }}" class="form-control">
-                                <input type="text" name="option3_{{ question.id }}" value="{{ question.option3 }}" class="form-control">
-                                <input type="text" name="option4_{{ question.id }}" value="{{ question.option4 }}" class="form-control">
+                            <div class="modal fade" id="editQuizModal{{ quiz.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Edit Questions for: {{ quiz.title }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form action="{{ url_for('edit_questions', quiz_id=quiz.id) }}" method="POST">
+                                                {% for question in quiz.questions %}
+                                                    <div>
+                                                        <label class="form-label">Question {{ loop.index }}</label>
+                                                        <input type="text" name="question_{{ question.id }}" value="{{ question.question }}" class="form-control" required>
+                                                        
+                                                        {% if question.question_type == "mcq" %}
+                                                            <label>Options:</label>
+                                                            <input type="text" name="option1_{{ question.id }}" value="{{ question.option1 }}" class="form-control">
+                                                            <input type="text" name="option2_{{ question.id }}" value="{{ question.option2 }}" class="form-control">
+                                                            <input type="text" name="option3_{{ question.id }}" value="{{ question.option3 }}" class="form-control">
+                                                            <input type="text" name="option4_{{ question.id }}" value="{{ question.option4 }}" class="form-control">
 
-                                <label>Correct Answer:</label>
-                                <select name="correct_{{ question.id }}" class="form-control">
-                                    <option value="A" {% if question.correct == "A" %}selected{% endif %}>A</option>
-                                    <option value="B" {% if question.correct == "B" %}selected{% endif %}>B</option>
-                                    <option value="C" {% if question.correct == "C" %}selected{% endif %}>C</option>
-                                    <option value="D" {% if question.correct == "D" %}selected{% endif %}>D</option>
-                                </select>
-                            {% elif question.question_type == "numeric" %}
-                                <label>Correct Answer:</label>
-                                <input type="number" step="any" name="numeric_answer_{{ question.id }}" value="{{ question.numeric_answer }}" class="form-control">
-                                
-                                <label>Tolerance:</label>
-                                <input type="number" step="any" name="tolerance_{{ question.id }}" value="{{ question.tolerance }}" class="form-control">
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No questions available.</p>
-                    {% endfor %}
-                    <button type="submit" class="btn btn-success">Save Changes</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
+                                                            <label>Correct Answer:</label>
+                                                            <select name="correct_{{ question.id }}" class="form-control">
+                                                                <option value="A" {% if question.correct == "A" %}selected{% endif %}>A</option>
+                                                                <option value="B" {% if question.correct == "B" %}selected{% endif %}>B</option>
+                                                                <option value="C" {% if question.correct == "C" %}selected{% endif %}>C</option>
+                                                                <option value="D" {% if question.correct == "D" %}selected{% endif %}>D</option>
+                                                            </select>
+                                                        {% elif question.question_type == "numeric" %}
+                                                            <label>Correct Answer:</label>
+                                                            <input type="number" step="any" name="numeric_answer_{{ question.id }}" value="{{ question.numeric_answer }}" class="form-control">
+                                                            
+                                                            <label>Tolerance:</label>
+                                                            <input type="number" step="any" name="tolerance_{{ question.id }}" value="{{ question.tolerance }}" class="form-control">
+                                                        {% endif %}
+                                                    </div>
+                                                {% else %}
+                                                    <p class="text-muted">No questions available.</p>
+                                                {% endfor %}
+                                                <button type="submit" class="btn btn-success">Save Changes</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             {% endfor %}
                         </div>
                     {% else %}
                         <p class="text-muted">No quizzes available for this chapter.</p>
                     {% endif %}
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Chapter Modal -->
+<div class="modal fade" id="deleteChapterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the chapter "{{ chapter.chapter }}" and all its content and quizzes?</p>
+                <p class="text-danger">This action cannot be undone!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_chapter', chapter_id=chapter.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete Chapter</button>
+                </form>
             </div>
         </div>
     </div>

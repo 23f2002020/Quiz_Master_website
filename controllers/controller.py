@@ -1,5 +1,5 @@
 
-from flask import Flask, render_template, request,redirect,url_for,flash,session,send_from_directory
+from flask import Flask, render_template, request,redirect,url_for,flash,session,send_from_directory,abort
 from .model import *
 from datetime import datetime, timedelta
 from flask import current_app as app
@@ -9,8 +9,31 @@ from functools import wraps
 import matplotlib
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
+import seaborn as sns
 import io
 import base64
+import pandas as pd
+import numpy as np
+from sqlalchemy import func
+from collections import defaultdict
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session or session.get('role') != 0:  # Assuming 0 is admin role
+            flash('You do not have permission to access this page', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 @app.route("/")
@@ -91,18 +114,45 @@ def admin_dashboard(Name):
     return render_template("admin_dashboard.html",Name=Name, subjects=subjects,chapters=chapters,quizzes=quizzes, content=contents, users = users,user_info=admin_info)
 
 @app.route("/user/<id>")
+@login_required
 def user_interface(id):
+    # Verify the user is accessing their own interface
+    if int(id) != session.get('user_id') and session.get('role') != 0:
+        flash("You can only access your own dashboard", "error")
+        return redirect(url_for('user_interface', id=session.get('user_id')))
+
+    user_info = User_Info.query.get_or_404(id)
     subjects = get_subjects()
     chapters = get_chapters()
-    user_info = User_Info.query.filter_by(id=id).first()
-    name = user_info.fullname
+    
+    # Get all content accessible to the user
+    accessible_content = []
+    for chapter in chapters:
+        accessible_content.extend(content.query.filter_by(chapter_id=chapter.id).all())
+    
+    # Get quiz results with more details
     quiz_results = {}
     for chapter in chapters:
         for quiz in chapter.quizzes:
-            result = QuizResult.query.filter_by(user_id=user_info.id, quiz_id=quiz.id).first()
-            quiz_results[quiz.id] = result.id if result else None
-    session["quiz_results"] = quiz_results
-    return render_template("user_interface.html",id=id, subjects=subjects,chapters=chapters,now=datetime.now(),user_info = user_info,quiz_results=quiz_results,name=name)
+            result = QuizResult.query.filter_by(user_id=id, quiz_id=quiz.id).first()
+            if result:
+                quiz_results[quiz.id] = {
+                    'result_id': result.id,
+                    'score': result.score,
+                    'date_taken': result.date_taken,
+                    'time_taken': result.time_taken,
+                    'total_marks': quiz.totalMarks,
+                    'passed': result.score >= quiz.passingMarks
+                }
+    
+    return render_template("user_interface.html",
+                         id=id,
+                         subjects=subjects,
+                         chapters=chapters,
+                         content=accessible_content,
+                         quiz_results=quiz_results,
+                         user_info=user_info,
+                         now=datetime.now())
 
 
 
@@ -122,64 +172,47 @@ allowed_extention = {
     "ppt":{'ppt','pptx'},
     "doc":{'doc','docx'}
 }
+
 def allowed_file(filename, content_type=None):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extention[content_type]
-
 
 @app.route("/add_chapter/<int:subject_id>", methods=["GET", "POST"])
 def add_chapter(subject_id):
     subject = Subject.query.get_or_404(subject_id)
     if request.method == "POST":
-        chapter_name = request.form.get("chapter_name")
-        chapter_description = request.form.get("chapter_description")
-
-        # Check if a chapter with the same name already exists for this subject
-        existing_chapter = Chapter.query.filter_by(
-            chapter=chapter_name, subject_id=subject_id
-        ).first()
-
-        if existing_chapter:
-            # If the chapter already exists, use it
-            chapter = existing_chapter
-            flash("Chapter already exists. Content will be added to the existing chapter.", "info")
-        else:
-            # If the chapter does not exist, create a new one
-            chapter = Chapter(chapter=chapter_name, description=chapter_description, subject_id=subject_id)
-            db.session.add(chapter)
-            db.session.commit()
-            flash("New chapter created successfully!", "success")
-
-        # Handle file uploads for each content type
-        content_types = {
-            "video": "video",
-            "pdf": "pdf",
-            "ppt": "ppt",
-            "word": "word"
-        }
-
+        # ... [your existing chapter creation code] ...
+        
         for content_type, form_key in content_types.items():
             if form_key in request.files:
                 file = request.files[form_key]
-                if file and allowed_file(file.filename, content_type):
+                if file and file.filename:
                     filename = secure_filename(file.filename)
-                    # Create a directory for the chapter if it doesn't exist
-                    chapter_dir = os.path.join(upload_folder, str(chapter.id), content_type)
+                    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                    
+                    if ext not in ALLOWED_EXTENSIONS:
+                        flash(f"Invalid file extension for {content_type}", "error")
+                        continue
+                        
+                    # Create directory structure: uploads/chapter_id/content_type/
+                    chapter_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(chapter.id), content_type)
                     os.makedirs(chapter_dir, exist_ok=True)
+                    
+                    # Save file
                     file_path = os.path.join(chapter_dir, filename)
                     file.save(file_path)
-
-                    # Save content details to the database
-                    new_content = content(title=filename,content_type=content_type,chapter_id=chapter.id,file_path=file_path)
+                    
+                    # Store relative path in database
+                    relative_path = os.path.join(str(chapter.id), content_type, filename)
+                    
+                    new_content = content(
+                        title=filename,
+                        content_type=content_type,
+                        chapter_id=chapter.id,
+                        file_path=relative_path  # Store relative path
+                    )
                     db.session.add(new_content)
-                    try:
-                        db.session.commit()
-                        flash(f'{content_type.capitalize()} content uploaded successfully!', 'success')
-                    except Exception as e:
-                        db.session.rollback()
-                        flash(f'Error uploading {content_type} content: {str(e)}', 'error')
-
-        return redirect(url_for("admin_dashboard", subject_id=subject_id, Name="Admin"))
-    return render_template("add_chapter.html", subject=subject)
+                    
+    
 
 @app.route("/add_quiz/<int:chapter_id>", methods=["GET","POST"])
 def add_quiz(chapter_id):
@@ -323,13 +356,7 @@ def save_question(quiz_id):
             
             existing_questions = Question.query.filter_by(quiz_id=quiz_id).count()
             remaining_questions = max(quiz.totalNoQues - existing_questions, 0)
-            # if "add_another" in request.form and remaining_questions > 0 :
-            #     flash('All questions have been added!', 'success')
-            #     return redirect(url_for('admin_dashboard', Name=session.get('user_name', '')))
-            
-            # if 'add_another' in request.form:
-            #     flash('Question saved successfully! Add another.', 'success')
-            #     return redirect(url_for('add_questions', quiz_id=quiz_id, type=question_type))
+          
             
             if "add_another" in request.form and remaining_questions > 0:
                 flash('Question saved! Add another.', 'success')
@@ -454,12 +481,12 @@ def submit_quiz(quiz_id):
     questions = Question.query.filter_by(quiz_id=quiz_id).all()
     user_id = int(session.get("user_id"))
 
-    # ✅ Ensure user has started the quiz
+    #  Ensure user has started the quiz
     if 'quiz_start_time' not in session:
         flash("Error: No active quiz session found.", "error")
         return redirect(url_for("user_interface", id=user_id))
 
-    # ✅ Convert session start time to float before using datetime.fromtimestamp()
+    #  Convert session start time to float before using datetime.fromtimestamp()
     start_time = datetime.fromtimestamp(float(session['quiz_start_time']))
     end_time = datetime.now()
     time_taken = (end_time - start_time).total_seconds()  # Store time in seconds
@@ -468,11 +495,11 @@ def submit_quiz(quiz_id):
     answers = {}
 
     for question in questions:
-        question_id = int(question.id)  # ✅ Ensure question_id is an integer
+        question_id = int(question.id)  #  Ensure question_id is an integer
         answer_key = f"q{question_id}"
         selected_answer = request.form.get(answer_key)
         is_correct = False
-        numeric_answer = None  # ✅ Initialize numeric_answer
+        numeric_answer = None  #  Initialize numeric_answer
 
         if selected_answer:
             if question.question_type == "numeric":
@@ -481,7 +508,7 @@ def submit_quiz(quiz_id):
                     correct_answer = float(question.numeric_answer)
                     tolerance = float(question.tolerance) if question.tolerance else 0.0
 
-                    # ✅ Compare correctly within tolerance range
+                    #  Compare correctly within tolerance range
                     if abs(selected_answer - correct_answer) <= tolerance:
                         is_correct = True
                         score += question.marks
@@ -507,10 +534,10 @@ def submit_quiz(quiz_id):
                     is_correct = True
                     score += question.marks
 
-            # ✅ Store answers in the dictionary
+            # Store answers in the dictionary
             answers[question_id] = selected_answer  
 
-            # ✅ Store user answers in the database
+            # Store user answers in the database
             user_answer = UserAnswers(
                 user_id=user_id,
                 quiz_id=quiz_id,
@@ -521,20 +548,20 @@ def submit_quiz(quiz_id):
             )
             db.session.add(user_answer)
 
-    # ✅ Save quiz result
+    # Save quiz result
     quiz_result = QuizResult(
         user_id=user_id,
         quiz_id=quiz_id,
         score=score,
         date_taken=start_time,
-        time_taken=int(time_taken)  # ✅ Ensure time_taken is stored as an integer
+        time_taken=int(time_taken)  # Ensure time_taken is stored as an integer
     )
     db.session.add(quiz_result)
 
-    # ✅ Commit all database changes
+    # Commit all database changes
     db.session.commit()
 
-    # ✅ Clean up session data
+    # Clean up session data
     session.pop('quiz_start_time', None)
     session.pop('quiz_id', None)
 
@@ -640,9 +667,50 @@ def edit_quiz(quiz_id):
     return render_template("edit_quiz.html", quiz=quiz)
 
 
+# At the top of controller.py with other configurations
+upload_folder = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = upload_folder  # Or your preferred path
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
+
+# Update your download_file route
+
 @app.route('/download/<path:filename>')
 def download_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+    try:
+        # Build the absolute path to the file
+        uploads_dir = os.path.join(app.root_path, 'static', 'uploads')
+        file_path = os.path.join(uploads_dir, filename)
+
+        # Check if file exists
+        if not os.path.isfile(file_path):
+            flash("File not found.", "error")
+            return redirect(url_for("user_interface", id=session.get("user_id")))
+
+        # Determine whether to download or view based on file type
+        download = request.args.get('download', 'false').lower() == 'true'
+        
+        # Guess MIME type
+        ext = filename.lower().rsplit('.', 1)[-1]
+        content_types = {
+            'pdf': 'application/pdf',
+            'ppt': 'application/vnd.ms-powerpoint',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'mp4': 'video/mp4'
+        }
+        content_type = content_types.get(ext, 'application/octet-stream')
+
+        return send_from_directory(
+            uploads_dir,
+            filename,
+            as_attachment=download,  # Only force download if ?download=true
+            mimetype=content_type
+        )
+    except Exception as e:
+        flash(f"Error accessing file: {str(e)}", "error")
+        return redirect(url_for("user_interface", id=session.get("user_id")))
+
 
 @app.route("/scores/<int:user_id>")
 def scores(user_id):
@@ -650,104 +718,354 @@ def scores(user_id):
     user_info = User_Info.query.filter_by(id=user_id).first()
     return render_template("scores.html", user_results=user_results, user_info=user_info)
 
-
-
 @app.route("/summary/<int:user_id>")
 def summary(user_id):
     # Fetch user information
-    user_info = User_Info.query.filter_by(id=user_id).first()
-
+    user_info = User_Info.query.get_or_404(user_id)
+    
     # Fetch all quiz results for the user
     user_results = QuizResult.query.filter_by(user_id=user_id).all()
+    
+    # Calculate quick stats
+    total_quizzes = Quiz.query.count()
+    completed_quizzes = len({result.quiz_id for result in user_results})
 
-    # Prepare data for subject-wise performance
-    subject_scores = {}
+    incomplete_quizzes = total_quizzes - completed_quizzes
+    
+    # Calculate average score and performance metrics
+    avg_score = 0
+    if user_results:
+        avg_score = sum(result.score for result in user_results) / len(user_results)
+    
+    # Performance label based on average score
+    performance_label = "Excellent" if avg_score >= 85 else \
+                       "Good" if avg_score >= 70 else \
+                       "Average" if avg_score >= 50 else "Needs Improvement"
+    
+    # Calculate improvement rate (last 3 quizzes vs previous 3)
+    improvement_rate = 0
+    if len(user_results) >= 6:
+        recent_avg = sum(r.score for r in user_results[-3:]) / 3
+        older_avg = sum(r.score for r in user_results[-6:-3]) / 3
+        improvement_rate = ((recent_avg - older_avg) / older_avg) * 100 if older_avg != 0 else 0
+    
+    # Subject performance analysis
+    subject_scores = defaultdict(list)
     for result in user_results:
-        subject_name = result.quiz.chapter_ref.subject_ref.subject  # Access subject name
-        if subject_name not in subject_scores:
-            subject_scores[subject_name] = []
-        subject_scores[subject_name].append(result.score)
-
-    # Calculate average score for each subject
-    subject_avg_scores = {subject: sum(scores) / len(scores) for subject, scores in subject_scores.items()}
-
-    # Fetch all quizzes in the system
-    all_quizzes = Quiz.query.all()
-
-    # Determine completed quizzes by the user
-    completed_quiz_ids = {result.quiz_id for result in user_results}
-
-    # Calculate incomplete quizzes (including expired quizzes)
-    incomplete_quizzes = 0
-    for quiz in all_quizzes:
-        if quiz.id not in completed_quiz_ids:
-            # Check if the quiz has expired
-            if quiz.deadline and quiz.deadline < datetime.now():
-                incomplete_quizzes += 1
-
-    # Total quizzes in the system
-    total_quizzes = len(all_quizzes)
-
-    # Ensure completed quizzes count is accurate
-    completed_quizzes = len(completed_quiz_ids)
-
-    # Generate subject-wise performance bar chart
-    plt.figure(figsize=(10, 5))
-    plt.bar(subject_avg_scores.keys(), subject_avg_scores.values(), color='blue')
-    plt.xlabel('Subjects')
-    plt.ylabel('Average Score')
-    plt.title(f'{user_info.fullname}\'s Subject-wise Performance')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-
-    # Save the bar chart to a BytesIO object
-    buf1 = io.BytesIO()
-    plt.savefig(buf1, format='png')
-    buf1.seek(0)
-    plt.close()
-
-    # Encode the bar chart image to base64
-    bar_chart_image = base64.b64encode(buf1.getvalue()).decode('utf-8')
-
-    # Generate overall quiz completion pie chart
-    plt.figure(figsize=(5, 5))
-    labels = ['Completed Quizzes', 'Incomplete Quizzes']
-    sizes = [completed_quizzes, incomplete_quizzes]
-    colors = ['green', 'red']
-    plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=140)
-    plt.title(f'{user_info.fullname}\'s Overall Quiz Completion')
-    plt.tight_layout()
-
-    # Save the pie chart to a BytesIO object
-    buf2 = io.BytesIO()
-    plt.savefig(buf2, format='png')
-    buf2.seek(0)
-    plt.close()
-
-    # Encode the pie chart image to base64
-    pie_chart_image = base64.b64encode(buf2.getvalue()).decode('utf-8')
-
+        subject_name = result.quiz.chapter_ref.subject_ref.subject
+        subject_scores[subject_name].append(result.score *10)
+    
+    subject_perf = []
+    for subject, scores in subject_scores.items():
+        subject_perf.append({
+            'subject': subject,
+            'average': sum(scores) / len(scores),
+            'highest': max(scores),
+            'lowest': min(scores),
+            'attempts': len(scores),
+            'improvement': calculate_subject_improvement(subject, user_id)
+        })
+    
+    # Time management analysis
+    time_data = [{
+        'quiz': result.quiz.title,
+        'time_taken': result.time_taken,
+        'time_per_question': result.time_taken / result.quiz.totalNoQues if result.quiz.totalNoQues else 0,
+        'score': result.score
+    } for result in user_results if result.time_taken]
+    
+    # Class comparison data
+    class_avg_scores = get_class_averages()
+    class_comparison = []
+    for subject, data in subject_scores.items():
+        user_avg = sum(data) / len(data)
+        class_avg = class_avg_scores.get(subject , 0)
+        class_comparison.append({
+            'subject': subject,
+            'user_avg': user_avg,
+            'class_avg': class_avg,
+            'difference': user_avg - class_avg
+        })
+    
+    # Generate visualizations
+    charts = {
+        'subject_performance': generate_subject_performance_chart(subject_perf),
+        'completion_status': generate_completion_chart(completed_quizzes, incomplete_quizzes),
+        'performance_trend': generate_performance_trend(user_results),
+        'time_management': generate_time_management_chart(time_data),
+        'class_comparison': generate_class_comparison_chart(class_comparison),
+        'weak_areas': generate_weak_areas_chart(subject_perf)
+    }
+    
+    # Generate improvement suggestions
+    suggestions = generate_improvement_suggestions(subject_perf, time_data, improvement_rate)
+    
     return render_template(
         "summary.html",
-        bar_chart_image=bar_chart_image,
-        pie_chart_image=pie_chart_image,
-        user_info=user_info
+        user_info =user_info,
+        quick_stats={
+            'total_quizzes': total_quizzes,
+            'completed': completed_quizzes,
+            'incomplete': incomplete_quizzes,
+            'avg_score': avg_score,
+            'performance_label': performance_label,
+            'improvement_rate': improvement_rate
+        },
+        subject_perf=sorted(subject_perf, key=lambda x: x['average'], reverse=True),
+        time_data=time_data,
+        class_comparison=class_comparison,
+        charts=charts,
+        suggestions=suggestions
     )
 
+def calculate_subject_improvement(subject_name, user_id):
+    """Calculate improvement rate for a specific subject"""
+    subject_results = QuizResult.query.join(Quiz).join(Chapter).join(Subject)\
+        .filter(Subject.subject == subject_name, QuizResult.user_id == user_id)\
+        .order_by(QuizResult.date_taken).all()
+    
+    if len(subject_results) >= 4:
+        recent = subject_results[-2:]
+        older = subject_results[:2]
+        recent_avg = sum(r.score for r in recent) / len(recent)
+        older_avg = sum(r.score for r in older) / len(older)
+        return ((recent_avg - older_avg) / older_avg) * 100 if older_avg != 0 else 0
+    return 0
+
+def get_class_averages():
+    """Calculate average scores for each subject across all users"""
+    results = db.session.query(
+        Subject.subject,
+        func.avg(QuizResult.score * 10).label('avg_score')
+    ).join(Quiz).join(Chapter).join(Subject)\
+     .group_by(Subject.subject).all()
+    return {subject: avg_score for subject, avg_score in results}
+
+def generate_subject_performance_chart(subject_data):
+    """Generate subject performance bar chart"""
+    plt.figure(figsize=(10, 6))
+    sns.set_theme(style="whitegrid")
+    
+    subjects = [d['subject'] for d in subject_data]
+    avgs = [d['average'] for d in subject_data]
+    
+    ax = sns.barplot(x=subjects, y=avgs, palette="viridis")
+    ax.set(xlabel='Subjects', ylabel='Average Score', title='Subject-wise Performance')
+    plt.xticks(rotation=45)
+    plt.ylim(0, 100)
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plt.close()
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+def generate_completion_chart(completed, incomplete):
+    """Generate quiz completion pie chart"""
+    plt.figure(figsize=(8, 8))
+    labels = ['Completed', 'Incomplete']
+    sizes = [completed, incomplete]
+    colors = ['#4CAF50', '#F44336']
+    explode = (0.1, 0)
+    
+    plt.pie(sizes, explode=explode, labels=labels, colors=colors,
+            autopct='%1.1f%%', shadow=True, startangle=140)
+    plt.title('Quiz Completion Status')
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close()
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+def generate_performance_trend(results):
+    """Generate performance trend line chart"""
+    if not results:
+        return None
+        
+    dates = [r.date_taken.strftime('%Y-%m-%d') for r in results]
+    scores = [r.score for r in results]
+    
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(x=dates, y=scores, marker='o', color='#2196F3', linewidth=2.5)
+    plt.title('Performance Trend Over Time')
+    plt.xlabel('Date')
+    plt.ylabel('Score')
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plt.close()
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+def generate_time_management_chart(time_data):
+    """Generate time management scatter plot"""
+    if not time_data:
+        return None
+        
+    df = pd.DataFrame(time_data)
+    
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(data=df, x='time_per_question', y='score', hue='quiz',
+                   palette='deep', s=100)
+    plt.title('Time Management vs Performance')
+    plt.xlabel('Time per Question (seconds)')
+    plt.ylabel('Score')
+    plt.axvline(x=60, color='r', linestyle='--', label='Ideal Time')
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plt.close()
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+def generate_class_comparison_chart(comparison_data):
+    """Generate class comparison radar chart"""
+    if not comparison_data:
+        return None
+        
+    subjects = [d['subject'] for d in comparison_data]
+    user_avgs = [d['user_avg'] for d in comparison_data]
+    class_avgs = [d['class_avg'] for d in comparison_data]
+    
+    angles = np.linspace(0, 2*np.pi, len(subjects), endpoint=False).tolist()
+    angles += angles[:1]  # Close the polygon
+    
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
+    
+    # Plot user averages
+    values = user_avgs + user_avgs[:1]
+    ax.plot(angles, values, color='#4CAF50', linewidth=2, label='Your Score')
+    ax.fill(angles, values, color='#4CAF50', alpha=0.25)
+    
+    # Plot class averages
+    values = class_avgs + class_avgs[:1]
+    ax.plot(angles, values, color='#2196F3', linewidth=2, label='Class Average')
+    ax.fill(angles, values, color='#2196F3', alpha=0.25)
+    
+    ax.set_theta_offset(np.pi/2)
+    ax.set_theta_direction(-1)
+    ax.set_thetagrids(np.degrees(angles[:-1]), subjects)
+    
+    ax.set_rlabel_position(0)
+    plt.yticks([20, 40, 60, 80, 100], ["20", "40", "60", "80", "100"], color="grey", size=7)
+    plt.ylim(0, 100)
+    
+    plt.title('Performance Compared to Class', y=1.1)
+    plt.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1))
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plt.close()
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+def generate_weak_areas_chart(subject_data):
+    """Generate weak areas heatmap"""
+    if not subject_data:
+        return None
+        
+    df = pd.DataFrame(subject_data)
+    df['weakness_score'] = 100 - df['average']  # Higher score means weaker area
+    
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(df[['subject', 'weakness_score']].set_index('subject').T,
+                cmap='YlOrRd', annot=True, fmt='.1f', linewidths=.5)
+    plt.title('Weak Areas Identification')
+    plt.yticks([])
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plt.close()
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+def generate_improvement_suggestions(subject_perf, time_data, improvement_rate):
+    """Generate personalized improvement suggestions"""
+    suggestions = []
+    
+    # Subject-based suggestions
+    weak_subjects = sorted(subject_perf, key=lambda x: x['average'])[:2]
+    for subj in weak_subjects:
+        suggestions.append({
+            'type': 'subject',
+            'message': f"Focus more on {subj['subject']} (your score: {subj['average']:.1f}%)",
+            'priority': 'high'
+        })
+    
+    # Time management suggestions
+    if time_data:
+        avg_time = sum(t['time_per_question'] for t in time_data) / len(time_data)
+        if avg_time > 90:
+            suggestions.append({
+                'type': 'time',
+                'message': "You're spending too much time per question (avg: {:.1f}s). Practice timed quizzes.".format(avg_time),
+                'priority': 'medium'
+            })
+    
+    # Improvement rate suggestion
+    if improvement_rate > 0:
+        suggestions.append({
+            'type': 'progress',
+            'message': f"Great job! Your scores are improving (+{improvement_rate:.1f}% recently)",
+            'priority': 'positive'
+        })
+    elif improvement_rate < 0:
+        suggestions.append({
+            'type': 'progress',
+            'message': f"Your recent scores are dropping ({improvement_rate:.1f}%). Review previous quizzes.",
+            'priority': 'high'
+        })
+    
+    # General suggestions
+    suggestions.extend([
+        {
+            'type': 'general',
+            'message': "Review incorrect answers from past quizzes",
+            'priority': 'medium'
+        },
+        {
+            'type': 'general',
+            'message': "Take practice quizzes on weak subjects",
+            'priority': 'high'
+        }
+    ])
+    
+    return suggestions
+
 @app.route("/search")
+@login_required
+@admin_required
 def search():
-    query = request.args.get('query', '').strip()  # Get the search term from the query parameters
+    query = request.args.get('query', '').strip()
     if not query:
         flash("Please enter a search term.", "error")
         return redirect(url_for('admin_dashboard', Name=session.get('user_name', 'Admin')))
 
-    # Search for subjects, chapters, quizzes, or users that start with the query term
-    subjects = Subject.query.filter(Subject.subject.ilike(f'%{query}%')).all()
-    chapters = Chapter.query.filter(Chapter.chapter.ilike(f'%{query}%')).all()
-    quizzes = Quiz.query.filter(Quiz.title.ilike(f'%{query}%')).all()
-    users = User_Info.query.filter(User_Info.fullname.ilike(f'%{query}%')).all()
+    try:
+        # Get admin name from session for the dashboard link
+        admin_name = session.get('user_name', 'Admin')
+        
+        # Search queries
+        users = User_Info.query.filter(User_Info.fullname.ilike(f'%{query}%')).all()
+        subjects = Subject.query.filter(Subject.subject.ilike(f'%{query}%')).all()
+        chapters = Chapter.query.filter(Chapter.chapter.ilike(f'%{query}%')).all()
+        quizzes = Quiz.query.filter(Quiz.title.ilike(f'%{query}%')).all()
 
-    return render_template('search.html', query=query, subjects=subjects, chapters=chapters, quizzes=quizzes, users=users)
+        return render_template('search.html',
+                            query=query,
+                            users=users,
+                            subjects=subjects,
+                            chapters=chapters,
+                            quizzes=quizzes,
+                            admin_name=admin_name)  # Pass admin_name to template
+    
+    except Exception as e:
+        flash(f"An error occurred during search: {str(e)}", "error")
+        return redirect(url_for('admin_dashboard', Name=session.get('user_name', 'Admin')))
 
 @app.route("/user_performance/<int:user_id>")
 def user_performance(user_id):
@@ -882,24 +1200,137 @@ def students_details():
     
     return render_template("students_details.html", students=students, user_info=admin_info)
 
+# Remove the separate update_profile route and modify view_profile to handle updates:
+
+# In controller.py - modify view_profile route
 @app.route("/view_profile/<int:user_id>", methods=["GET", "POST"])
+@login_required
 def view_profile(user_id):
-    # Fetch the user's details
+    # Authorization check
+    if user_id != session.get('user_id') and session.get('role') != 0:
+        flash("You can only edit your own profile", "error")
+        return redirect(url_for('user_interface', id=session.get('user_id')))
+
     user_info = User_Info.query.get_or_404(user_id)
 
     if request.method == "POST":
-        # Update the user's details
-        user_info.fullname = request.form.get("fullname", user_info.fullname)
-        user_info.email = request.form.get("email", user_info.email)
-        user_info.qualification = request.form.get("qualification", user_info.qualification)
-        user_info.dob = request.form.get("dob", user_info.dob)
-
-        # Save changes to the database
-        db.session.commit()
-        flash("Profile updated successfully!", "success")
-        return redirect(url_for("view_profile", user_id=user_id))
+        try:
+            # Update profile fields
+            user_info.fullname = request.form.get('fullname', user_info.fullname)
+            user_info.email = request.form.get('email', user_info.email)
+            user_info.qualification = request.form.get('qualification', user_info.qualification)
+            
+            # Handle date of birth
+            dob_str = request.form.get('dob')
+            if dob_str:
+                try:
+                    user_info.dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash("Invalid date format. Please use YYYY-MM-DD.", "error")
+            
+            db.session.commit()
+            flash("Profile updated successfully!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating profile: {str(e)}", "error")
+        
+        return redirect(url_for('view_profile', user_id=user_id))
 
     return render_template("view_profile.html", user_info=user_info)
+
+
+# Route to delete a chapter
+@app.route("/delete_chapter/<int:chapter_id>", methods=["POST"])
+def delete_chapter(chapter_id):
+    chapter = Chapter.query.get_or_404(chapter_id)
+    subject_id = chapter.subject_id
+    
+    try:
+        # Delete all content files first
+        contents = content.query.filter_by(chapter_id=chapter_id).all()
+        for content_item in contents:
+            try:
+                if os.path.exists(content_item.file_path):
+                    os.remove(content_item.file_path)
+            except Exception as e:
+                app.logger.error(f"Error deleting file {content_item.file_path}: {str(e)}")
+        
+        # Delete all quizzes and related data
+        quizzes = Quiz.query.filter_by(chapter_id=chapter_id).all()
+        for quiz in quizzes:
+            # Delete quiz results
+            QuizResult.query.filter_by(quiz_id=quiz.id).delete()
+            # Delete user answers
+            UserAnswers.query.filter_by(quiz_id=quiz.id).delete()
+            # Delete questions
+            Question.query.filter_by(quiz_id=quiz.id).delete()
+            db.session.delete(quiz)
+        
+        # Delete the chapter and its content
+        content.query.filter_by(chapter_id=chapter_id).delete()
+        db.session.delete(chapter)
+        db.session.commit()
+        
+        flash("Chapter and all its content deleted successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting chapter: {str(e)}", "error")
+    
+    return redirect(url_for("admin_dashboard", Name=session.get('user_name', 'Admin')))
+
+@app.route("/delete_subject/<int:subject_id>", methods=["POST"])
+def delete_subject(subject_id):
+    subject = Subject.query.get_or_404(subject_id)
+    
+    try:
+        # Get all chapters for this subject
+        chapters = Chapter.query.filter_by(subject_id=subject_id).all()
+        
+        for chapter in chapters:
+            # Delete all content files first
+            contents = content.query.filter_by(chapter_id=chapter.id).all()
+            for content_item in contents:
+                try:
+                    if os.path.exists(content_item.file_path):
+                        os.remove(content_item.file_path)
+                except Exception as e:
+                    app.logger.error(f"Error deleting file {content_item.file_path}: {str(e)}")
+            
+            # Delete all quizzes and related data for each chapter
+            quizzes = Quiz.query.filter_by(chapter_id=chapter.id).all()
+            for quiz in quizzes:
+                # Delete quiz results
+                QuizResult.query.filter_by(quiz_id=quiz.id).delete()
+                # Delete user answers
+                UserAnswers.query.filter_by(quiz_id=quiz.id).delete()
+                # Delete questions
+                Question.query.filter_by(quiz_id=quiz.id).delete()
+                db.session.delete(quiz)
+            
+            # Delete chapter content
+            content.query.filter_by(chapter_id=chapter.id).delete()
+            db.session.delete(chapter)
+        
+        # Finally delete the subject
+        db.session.delete(subject)
+        db.session.commit()
+        
+        flash("Subject and all its content deleted successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting subject: {str(e)}", "error")
+    
+    return redirect(url_for("admin_dashboard", Name=session.get('user_name', 'Admin')))
+
+
+@app.route('/quiz_summary/<int:quiz_id>')
+def quiz_summary(quiz_id):
+    quiz = Quiz.query.get(quiz_id)
+    if quiz.deadline > datetime.utcnow():
+        flash("Quiz still active. Summary not available.", "warning")
+        return redirect(url_for('view_lesson', chapter_id=quiz.chapter_id))
+    # Logic to compile and display quiz result
+    return render_template('quiz_summary.html', quiz=quiz, answers=quiz.answers)
 
 @app.route("/logout")
 def logout():
